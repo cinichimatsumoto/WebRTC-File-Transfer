@@ -4,235 +4,310 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Local Drop</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230b7a75'/%3E%3Cpath d='M16 7v13m0 0-5-5m5 5 5-5M9 25h14' stroke='white' stroke-width='3' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
 <style>
 :root{--bg:#eef2f3;--card:#fff;--tx:#14232b;--mut:#5d7079;--ac:#0b7a75;--acx:#fff;--bd:#cfd9dc;--er:#b42318}
 @media(prefers-color-scheme:dark){:root{--bg:#0e1a1f;--card:#15262d;--tx:#e6f0f1;--mut:#92a8ae;--ac:#3cc4b9;--acx:#06201e;--bd:#27414a;--er:#ff8a7a}}
 *{box-sizing:border-box}
+[hidden]{display:none!important}
 body{margin:0;font:16px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--bg);color:var(--tx);padding:28px 16px}
 main{max-width:520px;margin:0 auto}
 h1{font-size:26px;margin:0 0 4px;letter-spacing:-.02em}
-.s,.m{color:var(--mut)}
-.s{margin:0 0 20px}.m{font-size:14px;margin:6px 0}
+h2{font-size:17px;margin:0 0 10px}
+.s{color:var(--mut);margin:0 0 20px}
+.m{color:var(--mut);font-size:14px;margin:8px 0}
+.e{color:var(--er)}
 .card{background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:16px;margin-bottom:12px}
-.row{display:flex;gap:8px;flex-wrap:wrap}
+.row{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.top{display:flex;justify-content:space-between;align-items:center;gap:12px}
 button{font:inherit;padding:10px 16px;border-radius:8px;border:1px solid var(--bd);background:var(--card);color:var(--tx);cursor:pointer}
 button.p{background:var(--ac);border-color:var(--ac);color:var(--acx);font-weight:600}
-button.on{border-color:var(--ac);box-shadow:inset 0 0 0 1px var(--ac)}
+button.link{border:0;background:none;padding:0;color:var(--ac);text-decoration:underline}
+.seg{display:flex;border:1px solid var(--bd);border-radius:8px;overflow:hidden}
+.seg button{flex:1;border:0;border-radius:0}
+.seg button.on{background:var(--ac);color:var(--acx);font-weight:600}
 button:focus-visible,input:focus-visible{outline:3px solid var(--ac);outline-offset:2px}
 input[type=text]{font:inherit;width:100%;padding:10px;border-radius:8px;border:1px solid var(--bd);background:var(--bg);color:var(--tx)}
-.ph{font:600 22px ui-monospace,Consolas,monospace;word-break:break-word;margin:6px 0}
-#drop{border:2px dashed var(--bd);border-radius:10px;padding:22px;text-align:center}
+.ph{font:600 22px ui-monospace,Consolas,monospace;word-break:break-word;margin:4px 0 12px}
+#qr{display:block;background:#fff;padding:6px;border-radius:8px;image-rendering:pixelated;margin-bottom:8px}
+#drop{border:2px dashed var(--bd);border-radius:10px;padding:24px;text-align:center}
 #drop.o{border-color:var(--ac)}
-progress{width:100%;height:10px;margin-top:8px}
-.e{color:var(--er)}.hide{display:none}
+#list{list-style:none;margin:0;padding:0}
+#list li{background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:12px 16px;margin-bottom:8px;font-size:14px}
+progress{display:block;width:100%;height:8px;margin-top:8px}
 </style>
 </head>
 <body>
 <main>
 <h1>Local Drop</h1>
-<p class="s">Send files straight from one device to another. Nothing is uploaded to a server.</p>
+<p class="s">Direct file transfer between your devices. Files are never uploaded to a server.</p>
+<p id="msg" hidden></p>
 
-<div class="card">
-  <div class="m">Connection type</div>
-  <div class="row" id="modes">
-    <button data-m="lan" class="on">Nearby only</button>
-    <button data-m="any">Anywhere</button>
+<section id="vHome" class="card">
+  <h2>Connection type</h2>
+  <div class="seg" id="modes" role="group" aria-label="Connection type">
+    <button data-m="lan">Local network</button>
+    <button data-m="any">Internet</button>
   </div>
   <p class="m" id="note"></p>
-  <div class="row" style="margin-top:12px">
-    <button class="p" id="bR">Receive files</button>
-    <button class="p" id="bS">Send files</button>
+  <div class="row">
+    <button class="p" id="bH">Start a session</button>
+    <button id="bJ">Join a session</button>
   </div>
-</div>
+  <p class="m">Start a session on one device and join it from the other. Once connected, either device can send files.</p>
+</section>
 
-<div class="card hide" id="pR">
-  <div class="m">Tell the sender this phrase</div>
+<section id="vHost" class="card" hidden>
+  <h2>Session code</h2>
   <div class="ph" id="phrase"></div>
-  <div class="m">It works once and expires after 10 minutes.</div>
-</div>
+  <img id="qr" alt="QR code for this session">
+  <p class="m">Enter this code on the other device, or scan the QR code with its camera. The code works for one connection and expires after 10 minutes.</p>
+  <div class="row">
+    <button id="cc">Copy code</button>
+    <button id="cl">Copy link</button>
+    <button id="cx">Cancel</button>
+  </div>
+</section>
 
-<div class="card hide" id="pS">
-  <div class="m">Enter the phrase shown on the receiving device</div>
+<section id="vJoin" class="card" hidden>
+  <h2>Join a session</h2>
+  <label for="inp" class="m">Session code shown on the other device</label>
   <input type="text" id="inp" autocapitalize="none" autocomplete="off" spellcheck="false" placeholder="maple-river-lamp-stone-42">
-  <div class="row" style="margin-top:10px"><button class="p" id="go">Connect</button></div>
-</div>
+  <div class="row">
+    <button class="p" id="go">Join</button>
+    <button id="jx">Back</button>
+  </div>
+</section>
 
-<div class="card hide" id="pF">
-  <div id="drop">Drop files here or <button id="pick">choose files</button><input type="file" id="fi" multiple hidden></div>
-</div>
-
-<div class="card hide" id="pA">
-  <div id="ask"></div>
-  <div class="row" style="margin-top:10px"><button class="p" id="yes">Accept</button><button id="no">Decline</button></div>
-</div>
-
-<div class="card" id="pT">
-  <div id="st" class="m">Pick a connection type, then Receive or Send.</div>
-  <progress id="pg" class="hide" max="1" value="0"></progress>
-</div>
+<section id="vLive" hidden>
+  <div class="card top">
+    <div><strong id="peerName"></strong><div class="m" id="route" style="margin:0"></div></div>
+    <button id="bye">Disconnect</button>
+  </div>
+  <div class="card" id="pA" hidden>
+    <h2>Incoming files</h2>
+    <div id="ask"></div>
+    <div class="row"><button class="p" id="yes">Accept</button><button id="no">Decline</button></div>
+  </div>
+  <div class="card">
+    <div id="drop">Drag files here or <button class="link" id="pick">select files</button> to send<input type="file" id="fi" multiple hidden></div>
+    <label class="m" style="display:block"><input type="checkbox" id="auto"> Accept incoming files automatically</label>
+    <div class="m"><span id="dirnote"></span> <button class="link" id="chg" hidden>Change save folder</button></div>
+  </div>
+  <ul id="list"></ul>
+</section>
 </main>
 
 <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
 <script>
 const $=id=>document.getElementById(id);
 const WORDS=("acorn amber anchor apple arrow aspen atlas badge baker banjo basil beach berry birch blaze bloom brave bread brick brook cabin cactus camel candy canoe cedar chalk charm cherry chess cliff cloud clover cobra comet coral cotton crane creek crown daisy delta denim dune eagle ember fable fairy falcon fern ferry field finch flame flint forest frost galaxy garden ginger glacier grape gravel harbor hazel heron honey igloo iris island ivory jade jelly jungle kayak kite lagoon lantern lemon lilac lotus lunar maple marble meadow melon mint mocha moss nectar noble oasis olive onyx orbit otter panda pearl pepper pine plum pond poppy quartz quill raven reef ridge river robin saffron sage shell silver spruce stone sunny tulip velvet violet walnut willow winter yellow zebra zephyr pebble thunder").split(" ");
 const STUN=[{urls:"stun:stun.l.google.com:19302"},{urls:"stun:stun.cloudflare.com:3478"}];
 const NOTES={
-  lan:"Only local network addresses are used. The connection is checked and refused if it isn't local. Only a tiny handshake goes over the internet.",
-  any:"Uses public STUN servers to connect directly over the internet. There is no relay, so some networks (such as mobile data) may fail to connect."};
-const CHUNK=65536, BIG=1<<20;
-let mode="lan", peer, conn, timer, waiter, lock;
+  lan:"Both devices must be on the same Wi-Fi or local network. Files stay on that network; only the initial handshake uses the internet.",
+  any:"Files travel directly between the devices over the internet, never through a server. Some networks, such as mobile data, may block direct connections."};
+const CHUNK=65536, BIG=1<<20, TTL=6e5, VIEWS=["vHome","vHost","vJoin","vLive"], HAS_DIR=!!window.showDirectoryPicker;
+let mode="lan",peer,conn,timer,waiter,lock,dir,cur,rx,busy,wl,hostLink,route="",peerName="Other device",q=Promise.resolve();
+try{mode=localStorage.getItem("ld.mode")==="any"?"any":"lan"}catch{}
 
-// PeerJS ships with its own default STUN *and TURN* servers. Passing `config`
-// replaces them, so no relay is ever used.
+// Replacing `config` removes PeerJS's built-in TURN relay, so files can never be relayed.
 const cfg=()=>({iceServers:mode==="lan"?[]:STUN});
-const say=(t,err)=>{const s=$("st");s.textContent=t;s.className="m"+(err?" e":"")};
-const show=(...ids)=>["pR","pS","pF","pA"].forEach(i=>$(i).classList.toggle("hide",!ids.includes(i)));
-const prog=(v)=>{const p=$("pg");p.classList.toggle("hide",v==null);if(v!=null)p.value=v};
+const view=v=>VIEWS.forEach(i=>$(i).hidden=i!==v);
+const say=(t,err)=>{const s=$("msg");s.textContent=t||"";s.className="m"+(err?" e":"");s.hidden=!t};
 const fmt=n=>n<1e6?(n/1e3).toFixed(0)+" KB":n<1e9?(n/1e6).toFixed(1)+" MB":(n/1e9).toFixed(2)+" GB";
 const safe=n=>n.replace(/[\\/:*?"<>|]/g,"_");
+const norm=p=>p.trim().toLowerCase().replace(/[\s_.,]+/g,"-").replace(/[^a-z0-9-]/g,"").replace(/-+/g,"-");
+const plural=n=>n+" file"+(n===1?"":"s");
+const devName=()=>{const u=navigator.userAgent;return /iPhone/.test(u)?"iPhone":/iPad/.test(u)?"iPad":/Android/.test(u)?"Android device":/Windows/.test(u)?"Windows PC":/Mac/.test(u)?"Mac":/Linux/.test(u)?"Linux PC":"Other device"};
 
-function setMode(m){mode=m;$("note").textContent=NOTES[m];
+function setMode(m){mode=m;try{localStorage.setItem("ld.mode",m)}catch{}
+  $("note").textContent=NOTES[m];
   document.querySelectorAll("#modes button").forEach(b=>b.classList.toggle("on",b.dataset.m===m))}
 $("modes").onclick=e=>{if(e.target.dataset.m)setMode(e.target.dataset.m)};
-setMode("lan");
 
-function reset(){clearTimeout(timer);try{conn&&conn.close()}catch{}try{peer&&peer.destroy()}catch{}
-  conn=peer=waiter=null;prog(null);show()}
+function reset(){
+  clearTimeout(timer);try{conn&&conn.close()}catch{}try{peer&&peer.destroy()}catch{}
+  try{wl&&wl.release()}catch{}
+  conn=peer=waiter=cur=rx=wl=dir=null;lock=busy=false;q=Promise.resolve();
+  $("list").innerHTML="";$("pA").hidden=true;view("vHome")}
+const fail=m=>{reset();say(m,true)};
 
 async function pid(p){
-  const h=await crypto.subtle.digest("SHA-256",new TextEncoder().encode("localdrop:"+p.trim().toLowerCase()));
+  const h=await crypto.subtle.digest("SHA-256",new TextEncoder().encode("localdrop:"+norm(p)));
   return "ld"+[...new Uint8Array(h)].slice(0,16).map(b=>b.toString(16).padStart(2,"0")).join("")}
-
 function gen(){const r=new Uint32Array(5);crypto.getRandomValues(r);
   return [0,1,2,3].map(i=>WORDS[r[i]%WORDS.length]).join("-")+"-"+(10+r[4]%90)}
 
-// Is the connection that was actually chosen allowed in the current mode?
+// Confirms the connection that was actually selected. In local mode, anything else is refused.
 const priv=a=>!a||/\.local$/i.test(a)||/^(10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|169\.254\.|f[cd]|fe80)/i.test(a);
 async function check(c){
   try{
     const st=await c.peerConnection.getStats();let pair;
     st.forEach(r=>{if(r.type==="transport"&&r.selectedCandidatePairId)pair=st.get(r.selectedCandidatePairId)});
     if(!pair)st.forEach(r=>{if(r.type==="candidate-pair"&&r.state==="succeeded"&&(r.nominated||r.selected))pair=r});
-    const l=st.get(pair.localCandidateId), r=st.get(pair.remoteCandidateId);
+    const l=st.get(pair.localCandidateId),r=st.get(pair.remoteCandidateId);
     const local=l.candidateType==="host"&&r.candidateType==="host"&&priv(l.address||l.ip)&&priv(r.address||r.ip);
-    if(mode==="lan"&&!local)throw new Error("not local");
-    say(local?"Connected over your local network.":"Connected directly over the internet.");
-    return true;
-  }catch(e){
-    say("Couldn't confirm a local connection, so it was closed. Put both devices on the same Wi-Fi, or switch to Anywhere.",true);
-    reset();return false}
+    if(mode==="lan"&&!local)throw 0;
+    route=local?"Local network":"Internet, direct connection";return true;
+  }catch{
+    if(mode==="any"){route="Direct connection";return true}
+    fail("The connection could not be verified as local and was closed. Connect both devices to the same Wi-Fi network, or select Internet.");
+    return false}
 }
 
-// ---------- Receive ----------
-async function receive(){
-  reset();lock=false;show("pR");
-  const phrase=gen();$("phrase").textContent=phrase;say("Waiting for the sender…");
+// ---------- Session setup ----------
+async function host(){
+  reset();view("vHost");say("");
+  const phrase=gen();$("phrase").textContent=phrase;
+  hostLink=location.origin+location.pathname+"#j="+phrase+"&m="+mode;
+  const qr=qrcode(0,"M");qr.addData(hostLink);qr.make();$("qr").src=qr.createDataURL(5,4);
   peer=new Peer(await pid(phrase),{config:cfg()});
-  peer.on("error",e=>say("Signaling problem ("+e.type+"). Try again.",true));
+  peer.on("error",e=>fail("The connection service is unavailable ("+e.type+"). Please try again."));
   peer.on("connection",c=>{
     if(lock){c.close();return}
-    lock=true;conn=c;
-    c.on("open",async()=>{if(await check(c))recvSession(c)});
+    lock=true;conn=c;c.on("data",onData);c.on("close",()=>gone(c));
+    c.on("open",()=>established(c));
   });
-  timer=setTimeout(()=>{if(!lock){reset();say("The phrase expired. Press Receive files for a new one.",true)}},6e5);
+  timer=setTimeout(()=>{if(!lock)fail("The session code expired. Start a new session.")},TTL);
 }
 
-function recvSession(c){
-  show();$("pR").classList.add("hide");
-  let cur=null,dir=null,count=0,q=Promise.resolve();
-  const decide=m=>new Promise(res=>{
-    $("ask").textContent=`${m.n||"A device"} wants to send ${m.files.length} file(s), ${fmt(m.files.reduce((a,f)=>a+f.size,0))}: ${m.files.map(f=>f.name).slice(0,5).join(", ")}${m.files.length>5?"…":""}`;
-    show("pA");
-    $("yes").onclick=async()=>{ // runs inside the click, so the folder picker is allowed
-      let d=null;
-      if(window.showDirectoryPicker){try{d=await showDirectoryPicker({mode:"readwrite"})}catch{}}
-      show();res({ok:true,d})};
-    $("no").onclick=()=>{show();res({ok:false})};
-  });
-  async function handle(d){
-    if(typeof d==="string"){
-      const m=JSON.parse(d);
-      if(m.t==="offer"){
-        const r=await decide(m);
-        if(!r.ok){c.send(JSON.stringify({t:"reject"}));say("Declined.");return}
-        dir=r.d;c.send(JSON.stringify({t:"accept"}));
-        say(dir?"Receiving into your chosen folder…":"Receiving… (files are held in memory, then downloaded)");
-      }else if(m.t==="file"){
-        cur={...m,got:0,buf:[],w:null};
-        if(dir)cur.w=await(await dir.getFileHandle(safe(m.name),{create:true})).createWritable();
-        say("Receiving "+m.name);
-      }else if(m.t==="end"){
-        if(cur.w)await cur.w.close();
-        else{const a=document.createElement("a");a.href=URL.createObjectURL(new Blob(cur.buf));a.download=safe(cur.name);a.click();setTimeout(()=>URL.revokeObjectURL(a.href),6e4)}
-        count++;cur=null;
-      }else if(m.t==="done"){say(`Done. Received ${count} file(s).`);prog(null)}
-    }else if(cur){
-      if(cur.w)await cur.w.write(d);else cur.buf.push(d);
-      cur.got+=d.byteLength;prog(cur.size?cur.got/cur.size:1);
-    }
-  }
-  c.on("data",d=>{q=q.then(()=>handle(d)).catch(e=>say("Error: "+e.message,true))});
-  c.on("close",()=>{if(!$("st").textContent.startsWith("Done"))say("Connection closed.")});
-}
-
-// ---------- Send ----------
-async function send(){
-  const phrase=$("inp").value.trim();if(!phrase)return;
-  reset();show("pS");say("Connecting…");
-  const target=await pid(phrase);
+async function join(){
+  const phrase=norm($("inp").value);if(!phrase)return;
+  reset();view("vJoin");say("Connecting…");
   peer=new Peer({config:cfg()});
-  peer.on("error",e=>{say(e.type==="peer-unavailable"?"No receiver found for that phrase. Check it or ask for a new one.":"Signaling problem ("+e.type+").",true)});
-  peer.on("open",()=>{
-    conn=peer.connect(target,{serialization:"raw",reliable:true});
-    conn.on("open",async()=>{
-      clearTimeout(timer);
-      if(!await check(conn))return;
-      try{navigator.wakeLock&&navigator.wakeLock.request("screen").catch(()=>{})}catch{}
-      conn.on("data",d=>{if(typeof d==="string"&&waiter){const w=waiter;waiter=null;w(JSON.parse(d))}});
-      show("pF");
-    });
-    conn.on("close",()=>say("Connection closed."));
+  peer.on("error",e=>{clearTimeout(timer);view("vJoin");
+    say(e.type==="peer-unavailable"?"No session was found for this code. Check the code, or start a new session on the other device.":"The connection service is unavailable ("+e.type+"). Please try again.",true)});
+  peer.on("open",async()=>{
+    conn=peer.connect(await pid(phrase),{serialization:"raw",reliable:true});
+    conn.on("data",onData);conn.on("close",()=>gone(conn));
+    conn.on("open",()=>{clearTimeout(timer);established(conn)});
   });
-  timer=setTimeout(()=>{if(!conn||!conn.open){reset();show("pS");say("Couldn't connect. Check the phrase and the connection type on both devices.",true)}},25000);
+  timer=setTimeout(()=>{reset();view("vJoin");say("The connection timed out. Confirm the code and the connection type on both devices.",true)},25000);
+}
+
+const gone=c=>{if(conn===c){reset();say("The other device disconnected.",true)}};
+
+async function established(c){
+  if(!await check(c))return;
+  c.send(JSON.stringify({t:"hello",n:devName()}));
+  say("");renderLive();view("vLive");
+  try{navigator.wakeLock&&navigator.wakeLock.request("screen").then(l=>wl=l).catch(()=>{})}catch{}
+}
+function renderLive(){
+  $("peerName").textContent="Connected to "+peerName;$("route").textContent=route;
+  $("dirnote").textContent=HAS_DIR?"Received files are saved to a folder you choose.":"This browser downloads each received file when its transfer completes.";
+  $("chg").hidden=!HAS_DIR}
+
+// ---------- Transfers ----------
+function addRow(t){
+  const li=document.createElement("li");li.innerHTML="<span></span><progress max='1' value='0' hidden></progress>";
+  const s=li.firstChild,p=li.lastChild;$("list").prepend(li);
+  const o={set(v,txt,err){s.textContent=txt;s.className=err?"e":"";p.hidden=v==null||v>=1;if(v!=null)p.value=v}};
+  o.set(null,t);return o}
+
+function onData(d){
+  const run=f=>{q=q.then(f).catch(e=>addRow("").set(null,"Error: "+e.message,true))};
+  if(typeof d!=="string"){run(()=>chunk(d));return}
+  const m=JSON.parse(d);
+  if(m.t==="hello"){peerName=m.n||peerName;renderLive()}
+  else if(m.t==="accept"||m.t==="reject"){const w=waiter;waiter=null;w&&w(m)}
+  else run(()=>handle(m));
+}
+
+async function pickDir(){try{dir=await showDirectoryPicker({mode:"readwrite"})}catch{}}
+async function freeName(n){
+  const i=n.lastIndexOf("."),b=i>0?n.slice(0,i):n,x=i>0?n.slice(i):"";
+  for(let k=0;;k++){const t=k?`${b} (${k})${x}`:n;try{await dir.getFileHandle(t)}catch{return t}}}
+
+function decide(m){
+  if($("auto").checked&&(dir||!HAS_DIR))return Promise.resolve(true);
+  const names=m.files.map(f=>f.name);
+  return new Promise(res=>{
+    $("ask").textContent=`${peerName} wants to send ${plural(m.files.length)} (${fmt(m.files.reduce((a,f)=>a+f.size,0))}): ${names.slice(0,4).join(", ")}${names.length>4?", …":""}`;
+    $("pA").hidden=false;
+    $("yes").onclick=async()=>{if(HAS_DIR&&!dir)await pickDir();$("pA").hidden=true;res(true)};
+    $("no").onclick=()=>{$("pA").hidden=true;res(false)};
+  });
+}
+
+async function handle(m){
+  if(m.t==="offer"){
+    const ok=await decide(m);
+    conn.send(JSON.stringify({t:ok?"accept":"reject"}));
+    if(ok){const total=m.files.reduce((a,f)=>a+f.size,0);
+      rx={n:0,count:m.files.length,total,got:0,t0:performance.now(),row:addRow("Receiving "+plural(m.files.length)+"…")}}
+  }else if(m.t==="file"&&rx){
+    cur={...m,w:null,buf:[]};
+    if(dir)cur.w=await(await dir.getFileHandle(await freeName(safe(m.name)),{create:true})).createWritable();
+  }else if(m.t==="end"&&cur){
+    if(cur.w)await cur.w.close();
+    else{const a=document.createElement("a");a.href=URL.createObjectURL(new Blob(cur.buf));a.download=safe(cur.name);a.click();setTimeout(()=>URL.revokeObjectURL(a.href),6e4)}
+    cur=null;rx.n++;
+    if(rx.n===rx.count)rx.row.set(1,`Received ${plural(rx.count)} (${fmt(rx.total)})`+(dir?" and saved to your folder.":"."));
+  }
+}
+async function chunk(d){
+  if(!cur)return;
+  if(cur.w)await cur.w.write(d);else cur.buf.push(d);
+  rx.got+=d.byteLength;
+  rx.row.set(rx.got/(rx.total||1),`Receiving ${cur.name} (${rx.n+1} of ${rx.count}): ${Math.round(rx.got/(rx.total||1)*100)}%`);
 }
 
 async function sendFiles(fs){
-  if(!fs.length)return;
+  if(!fs.length||busy||!conn)return;busy=true;
   const dc=conn.dataChannel;dc.bufferedAmountLowThreshold=BIG;
   const flow=async()=>{if(dc.bufferedAmount>4*BIG)await new Promise(r=>dc.onbufferedamountlow=r)};
-  show();say("Waiting for the receiver to accept…");
-  conn.send(JSON.stringify({t:"offer",n:navigator.platform||"A device",files:fs.map(f=>({name:f.name,size:f.size}))}));
-  const a=await new Promise(r=>waiter=r);
-  if(a.t!=="accept"){say("The receiver declined.",true);show("pF");return}
-  const total=fs.reduce((x,f)=>x+f.size,0);let sent=0;
-  for(const f of fs){
-    say("Sending "+f.name);
-    conn.send(JSON.stringify({t:"file",name:f.name,size:f.size}));
-    for(let o=0;o<f.size;o+=BIG){
-      const b=await f.slice(o,o+BIG).arrayBuffer();
-      for(let i=0;i<b.byteLength;i+=CHUNK){
-        await flow();conn.send(new Uint8Array(b,i,Math.min(CHUNK,b.byteLength-i)));
+  const total=fs.reduce((a,f)=>a+f.size,0)||1;
+  const row=addRow(`Waiting for ${peerName} to accept ${plural(fs.length)}…`);
+  try{
+    conn.send(JSON.stringify({t:"offer",files:fs.map(f=>({name:f.name,size:f.size}))}));
+    const a=await new Promise(r=>waiter=r);
+    if(a.t!=="accept"){row.set(null,peerName+" declined the transfer.",true);return}
+    let sent=0;const t0=performance.now();
+    for(const [i,f] of fs.entries()){
+      conn.send(JSON.stringify({t:"file",name:f.name,size:f.size}));
+      for(let o=0;o<f.size;o+=BIG){
+        const b=await f.slice(o,o+BIG).arrayBuffer();
+        for(let k=0;k<b.byteLength;k+=CHUNK){await flow();conn.send(new Uint8Array(b,k,Math.min(CHUNK,b.byteLength-k)))}
+        sent+=b.byteLength;
+        row.set(sent/total,`Sending ${f.name} (${i+1} of ${fs.length}): ${Math.round(sent/total*100)}%, ${fmt(sent/((performance.now()-t0)/1000||1))}/s`);
       }
-      sent+=b.byteLength;prog(sent/total);
+      conn.send(JSON.stringify({t:"end"}));
     }
-    conn.send(JSON.stringify({t:"end"}));
-  }
-  while(dc.bufferedAmount>0)await new Promise(r=>setTimeout(r,100));
-  conn.send(JSON.stringify({t:"done"}));
-  say(`Sent ${fs.length} file(s).`);prog(null);show("pF");
+    while(dc.bufferedAmount>0)await new Promise(r=>setTimeout(r,100));
+    row.set(1,`Sent ${plural(fs.length)} (${fmt(total)}).`);
+  }catch(e){row.set(null,"Transfer failed: "+e.message,true)}
+  finally{busy=false}
 }
 
-$("bR").onclick=receive;
-$("bS").onclick=()=>{reset();show("pS");say("Enter the phrase to connect.");$("inp").focus()};
-$("go").onclick=send;
-$("inp").onkeydown=e=>{if(e.key==="Enter")send()};
+// ---------- Interface ----------
+const copy=async(t,b)=>{try{await navigator.clipboard.writeText(t);const o=b.textContent;b.textContent="Copied";setTimeout(()=>b.textContent=o,1500)}catch{}};
+$("bH").onclick=host;
+$("bJ").onclick=()=>{reset();view("vJoin");$("inp").focus()};
+$("go").onclick=join;
+$("inp").onkeydown=e=>{if(e.key==="Enter")join()};
+$("jx").onclick=()=>{reset();say("")};
+$("cx").onclick=()=>{reset();say("")};
+$("bye").onclick=()=>{reset();say("")};
+$("cc").onclick=()=>copy($("phrase").textContent,$("cc"));
+if(navigator.share)$("cl").textContent="Share link";
+$("cl").onclick=()=>navigator.share?navigator.share({title:"Local Drop",url:hostLink}).catch(()=>{}):copy(hostLink,$("cl"));
 $("pick").onclick=()=>$("fi").click();
 $("fi").onchange=e=>{sendFiles([...e.target.files]);e.target.value=""};
+$("chg").onclick=pickDir;
 const dz=$("drop");
 dz.ondragover=e=>{e.preventDefault();dz.classList.add("o")};
 dz.ondragleave=()=>dz.classList.remove("o");
 dz.ondrop=e=>{e.preventDefault();dz.classList.remove("o");sendFiles([...e.dataTransfer.files])};
+
+setMode(mode);view("vHome");
+// Opening a session link (or scanning its QR code) joins automatically.
+const hp=new URLSearchParams(location.hash.slice(1));
+if(hp.get("j")){
+  if(hp.get("m")==="lan"||hp.get("m")==="any")setMode(hp.get("m"));
+  $("inp").value=hp.get("j");history.replaceState(null,"",location.pathname+location.search);join();
+}
 </script>
 </body>
 </html>
