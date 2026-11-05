@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Local Drop</title>
+<style>
+:root{--bg:#eef2f3;--card:#fff;--tx:#14232b;--mut:#5d7079;--ac:#0b7a75;--acx:#fff;--bd:#cfd9dc;--er:#b42318}
+@media(prefers-color-scheme:dark){:root{--bg:#0e1a1f;--card:#15262d;--tx:#e6f0f1;--mut:#92a8ae;--ac:#3cc4b9;--acx:#06201e;--bd:#27414a;--er:#ff8a7a}}
+*{box-sizing:border-box}
+body{margin:0;font:16px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--bg);color:var(--tx);padding:28px 16px}
+main{max-width:520px;margin:0 auto}
+h1{font-size:26px;margin:0 0 4px;letter-spacing:-.02em}
+.s,.m{color:var(--mut)}
+.s{margin:0 0 20px}.m{font-size:14px;margin:6px 0}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:16px;margin-bottom:12px}
+.row{display:flex;gap:8px;flex-wrap:wrap}
+button{font:inherit;padding:10px 16px;border-radius:8px;border:1px solid var(--bd);background:var(--card);color:var(--tx);cursor:pointer}
+button.p{background:var(--ac);border-color:var(--ac);color:var(--acx);font-weight:600}
+button.on{border-color:var(--ac);box-shadow:inset 0 0 0 1px var(--ac)}
+button:focus-visible,input:focus-visible{outline:3px solid var(--ac);outline-offset:2px}
+input[type=text]{font:inherit;width:100%;padding:10px;border-radius:8px;border:1px solid var(--bd);background:var(--bg);color:var(--tx)}
+.ph{font:600 22px ui-monospace,Consolas,monospace;word-break:break-word;margin:6px 0}
+#drop{border:2px dashed var(--bd);border-radius:10px;padding:22px;text-align:center}
+#drop.o{border-color:var(--ac)}
+progress{width:100%;height:10px;margin-top:8px}
+.e{color:var(--er)}.hide{display:none}
+</style>
+</head>
+<body>
+<main>
+<h1>Local Drop</h1>
+<p class="s">Send files straight from one device to another. Nothing is uploaded to a server.</p>
+
+<div class="card">
+  <div class="m">Connection type</div>
+  <div class="row" id="modes">
+    <button data-m="lan" class="on">Nearby only</button>
+    <button data-m="any">Anywhere</button>
+  </div>
+  <p class="m" id="note"></p>
+  <div class="row" style="margin-top:12px">
+    <button class="p" id="bR">Receive files</button>
+    <button class="p" id="bS">Send files</button>
+  </div>
+</div>
+
+<div class="card hide" id="pR">
+  <div class="m">Tell the sender this phrase</div>
+  <div class="ph" id="phrase"></div>
+  <div class="m">It works once and expires after 10 minutes.</div>
+</div>
+
+<div class="card hide" id="pS">
+  <div class="m">Enter the phrase shown on the receiving device</div>
+  <input type="text" id="inp" autocapitalize="none" autocomplete="off" spellcheck="false" placeholder="maple-river-lamp-stone-42">
+  <div class="row" style="margin-top:10px"><button class="p" id="go">Connect</button></div>
+</div>
+
+<div class="card hide" id="pF">
+  <div id="drop">Drop files here or <button id="pick">choose files</button><input type="file" id="fi" multiple hidden></div>
+</div>
+
+<div class="card hide" id="pA">
+  <div id="ask"></div>
+  <div class="row" style="margin-top:10px"><button class="p" id="yes">Accept</button><button id="no">Decline</button></div>
+</div>
+
+<div class="card" id="pT">
+  <div id="st" class="m">Pick a connection type, then Receive or Send.</div>
+  <progress id="pg" class="hide" max="1" value="0"></progress>
+</div>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<script>
+const $=id=>document.getElementById(id);
+const WORDS=("acorn amber anchor apple arrow aspen atlas badge baker banjo basil beach berry birch blaze bloom brave bread brick brook cabin cactus camel candy canoe cedar chalk charm cherry chess cliff cloud clover cobra comet coral cotton crane creek crown daisy delta denim dune eagle ember fable fairy falcon fern ferry field finch flame flint forest frost galaxy garden ginger glacier grape gravel harbor hazel heron honey igloo iris island ivory jade jelly jungle kayak kite lagoon lantern lemon lilac lotus lunar maple marble meadow melon mint mocha moss nectar noble oasis olive onyx orbit otter panda pearl pepper pine plum pond poppy quartz quill raven reef ridge river robin saffron sage shell silver spruce stone sunny tulip velvet violet walnut willow winter yellow zebra zephyr pebble thunder").split(" ");
+const STUN=[{urls:"stun:stun.l.google.com:19302"},{urls:"stun:stun.cloudflare.com:3478"}];
+const NOTES={
+  lan:"Only local network addresses are used. The connection is checked and refused if it isn't local. Only a tiny handshake goes over the internet.",
+  any:"Uses public STUN servers to connect directly over the internet. There is no relay, so some networks (such as mobile data) may fail to connect."};
+const CHUNK=65536, BIG=1<<20;
+let mode="lan", peer, conn, timer, waiter, lock;
+
+// PeerJS ships with its own default STUN *and TURN* servers. Passing `config`
+// replaces them, so no relay is ever used.
+const cfg=()=>({iceServers:mode==="lan"?[]:STUN});
+const say=(t,err)=>{const s=$("st");s.textContent=t;s.className="m"+(err?" e":"")};
+const show=(...ids)=>["pR","pS","pF","pA"].forEach(i=>$(i).classList.toggle("hide",!ids.includes(i)));
+const prog=(v)=>{const p=$("pg");p.classList.toggle("hide",v==null);if(v!=null)p.value=v};
+const fmt=n=>n<1e6?(n/1e3).toFixed(0)+" KB":n<1e9?(n/1e6).toFixed(1)+" MB":(n/1e9).toFixed(2)+" GB";
+const safe=n=>n.replace(/[\\/:*?"<>|]/g,"_");
+
+function setMode(m){mode=m;$("note").textContent=NOTES[m];
+  document.querySelectorAll("#modes button").forEach(b=>b.classList.toggle("on",b.dataset.m===m))}
+$("modes").onclick=e=>{if(e.target.dataset.m)setMode(e.target.dataset.m)};
+setMode("lan");
+
+function reset(){clearTimeout(timer);try{conn&&conn.close()}catch{}try{peer&&peer.destroy()}catch{}
+  conn=peer=waiter=null;prog(null);show()}
+
+async function pid(p){
+  const h=await crypto.subtle.digest("SHA-256",new TextEncoder().encode("localdrop:"+p.trim().toLowerCase()));
+  return "ld"+[...new Uint8Array(h)].slice(0,16).map(b=>b.toString(16).padStart(2,"0")).join("")}
+
+function gen(){const r=new Uint32Array(5);crypto.getRandomValues(r);
+  return [0,1,2,3].map(i=>WORDS[r[i]%WORDS.length]).join("-")+"-"+(10+r[4]%90)}
+
+// Is the connection that was actually chosen allowed in the current mode?
+const priv=a=>!a||/\.local$/i.test(a)||/^(10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|169\.254\.|f[cd]|fe80)/i.test(a);
+async function check(c){
+  try{
+    const st=await c.peerConnection.getStats();let pair;
+    st.forEach(r=>{if(r.type==="transport"&&r.selectedCandidatePairId)pair=st.get(r.selectedCandidatePairId)});
+    if(!pair)st.forEach(r=>{if(r.type==="candidate-pair"&&r.state==="succeeded"&&(r.nominated||r.selected))pair=r});
+    const l=st.get(pair.localCandidateId), r=st.get(pair.remoteCandidateId);
+    const local=l.candidateType==="host"&&r.candidateType==="host"&&priv(l.address||l.ip)&&priv(r.address||r.ip);
+    if(mode==="lan"&&!local)throw new Error("not local");
+    say(local?"Connected over your local network.":"Connected directly over the internet.");
+    return true;
+  }catch(e){
+    say("Couldn't confirm a local connection, so it was closed. Put both devices on the same Wi-Fi, or switch to Anywhere.",true);
+    reset();return false}
+}
+
+// ---------- Receive ----------
+async function receive(){
+  reset();lock=false;show("pR");
+  const phrase=gen();$("phrase").textContent=phrase;say("Waiting for the sender…");
+  peer=new Peer(await pid(phrase),{config:cfg()});
+  peer.on("error",e=>say("Signaling problem ("+e.type+"). Try again.",true));
+  peer.on("connection",c=>{
+    if(lock){c.close();return}
+    lock=true;conn=c;
+    c.on("open",async()=>{if(await check(c))recvSession(c)});
+  });
+  timer=setTimeout(()=>{if(!lock){reset();say("The phrase expired. Press Receive files for a new one.",true)}},6e5);
+}
+
+function recvSession(c){
+  show();$("pR").classList.add("hide");
+  let cur=null,dir=null,count=0,q=Promise.resolve();
+  const decide=m=>new Promise(res=>{
+    $("ask").textContent=`${m.n||"A device"} wants to send ${m.files.length} file(s), ${fmt(m.files.reduce((a,f)=>a+f.size,0))}: ${m.files.map(f=>f.name).slice(0,5).join(", ")}${m.files.length>5?"…":""}`;
+    show("pA");
+    $("yes").onclick=async()=>{ // runs inside the click, so the folder picker is allowed
+      let d=null;
+      if(window.showDirectoryPicker){try{d=await showDirectoryPicker({mode:"readwrite"})}catch{}}
+      show();res({ok:true,d})};
+    $("no").onclick=()=>{show();res({ok:false})};
+  });
+  async function handle(d){
+    if(typeof d==="string"){
+      const m=JSON.parse(d);
+      if(m.t==="offer"){
+        const r=await decide(m);
+        if(!r.ok){c.send(JSON.stringify({t:"reject"}));say("Declined.");return}
+        dir=r.d;c.send(JSON.stringify({t:"accept"}));
+        say(dir?"Receiving into your chosen folder…":"Receiving… (files are held in memory, then downloaded)");
+      }else if(m.t==="file"){
+        cur={...m,got:0,buf:[],w:null};
+        if(dir)cur.w=await(await dir.getFileHandle(safe(m.name),{create:true})).createWritable();
+        say("Receiving "+m.name);
+      }else if(m.t==="end"){
+        if(cur.w)await cur.w.close();
+        else{const a=document.createElement("a");a.href=URL.createObjectURL(new Blob(cur.buf));a.download=safe(cur.name);a.click();setTimeout(()=>URL.revokeObjectURL(a.href),6e4)}
+        count++;cur=null;
+      }else if(m.t==="done"){say(`Done. Received ${count} file(s).`);prog(null)}
+    }else if(cur){
+      if(cur.w)await cur.w.write(d);else cur.buf.push(d);
+      cur.got+=d.byteLength;prog(cur.size?cur.got/cur.size:1);
+    }
+  }
+  c.on("data",d=>{q=q.then(()=>handle(d)).catch(e=>say("Error: "+e.message,true))});
+  c.on("close",()=>{if(!$("st").textContent.startsWith("Done"))say("Connection closed.")});
+}
+
+// ---------- Send ----------
+async function send(){
+  const phrase=$("inp").value.trim();if(!phrase)return;
+  reset();show("pS");say("Connecting…");
+  const target=await pid(phrase);
+  peer=new Peer({config:cfg()});
+  peer.on("error",e=>{say(e.type==="peer-unavailable"?"No receiver found for that phrase. Check it or ask for a new one.":"Signaling problem ("+e.type+").",true)});
+  peer.on("open",()=>{
+    conn=peer.connect(target,{serialization:"raw",reliable:true});
+    conn.on("open",async()=>{
+      clearTimeout(timer);
+      if(!await check(conn))return;
+      try{navigator.wakeLock&&navigator.wakeLock.request("screen").catch(()=>{})}catch{}
+      conn.on("data",d=>{if(typeof d==="string"&&waiter){const w=waiter;waiter=null;w(JSON.parse(d))}});
+      show("pF");
+    });
+    conn.on("close",()=>say("Connection closed."));
+  });
+  timer=setTimeout(()=>{if(!conn||!conn.open){reset();show("pS");say("Couldn't connect. Check the phrase and the connection type on both devices.",true)}},25000);
+}
+
+async function sendFiles(fs){
+  if(!fs.length)return;
+  const dc=conn.dataChannel;dc.bufferedAmountLowThreshold=BIG;
+  const flow=async()=>{if(dc.bufferedAmount>4*BIG)await new Promise(r=>dc.onbufferedamountlow=r)};
+  show();say("Waiting for the receiver to accept…");
+  conn.send(JSON.stringify({t:"offer",n:navigator.platform||"A device",files:fs.map(f=>({name:f.name,size:f.size}))}));
+  const a=await new Promise(r=>waiter=r);
+  if(a.t!=="accept"){say("The receiver declined.",true);show("pF");return}
+  const total=fs.reduce((x,f)=>x+f.size,0);let sent=0;
+  for(const f of fs){
+    say("Sending "+f.name);
+    conn.send(JSON.stringify({t:"file",name:f.name,size:f.size}));
+    for(let o=0;o<f.size;o+=BIG){
+      const b=await f.slice(o,o+BIG).arrayBuffer();
+      for(let i=0;i<b.byteLength;i+=CHUNK){
+        await flow();conn.send(new Uint8Array(b,i,Math.min(CHUNK,b.byteLength-i)));
+      }
+      sent+=b.byteLength;prog(sent/total);
+    }
+    conn.send(JSON.stringify({t:"end"}));
+  }
+  while(dc.bufferedAmount>0)await new Promise(r=>setTimeout(r,100));
+  conn.send(JSON.stringify({t:"done"}));
+  say(`Sent ${fs.length} file(s).`);prog(null);show("pF");
+}
+
+$("bR").onclick=receive;
+$("bS").onclick=()=>{reset();show("pS");say("Enter the phrase to connect.");$("inp").focus()};
+$("go").onclick=send;
+$("inp").onkeydown=e=>{if(e.key==="Enter")send()};
+$("pick").onclick=()=>$("fi").click();
+$("fi").onchange=e=>{sendFiles([...e.target.files]);e.target.value=""};
+const dz=$("drop");
+dz.ondragover=e=>{e.preventDefault();dz.classList.add("o")};
+dz.ondragleave=()=>dz.classList.remove("o");
+dz.ondrop=e=>{e.preventDefault();dz.classList.remove("o");sendFiles([...e.dataTransfer.files])};
+</script>
+</body>
+</html>
