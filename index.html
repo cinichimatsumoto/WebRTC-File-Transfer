@@ -84,6 +84,7 @@ progress{display:block;width:100%;height:8px;margin-top:8px}
     <div><strong id="peerName"></strong><div class="m" id="route" style="margin:0"></div></div>
     <button id="bye">Disconnect</button>
   </div>
+  <p class="m e" id="banner" hidden></p>
   <div class="card" id="pA" hidden>
     <h2>Incoming files</h2>
     <div id="ask"></div>
@@ -92,6 +93,8 @@ progress{display:block;width:100%;height:8px;margin-top:8px}
   <div class="card">
     <div id="drop">Drag files here or <button class="link" id="pick">select files</button> to send<input type="file" id="fi" multiple hidden></div>
     <label class="m" style="display:block"><input type="checkbox" id="auto"> Accept incoming files automatically</label>
+    <label class="m" style="display:block"><input type="checkbox" id="awake" checked> Keep this device awake while connected</label>
+    <div class="m" id="awakenote" style="margin-top:0"></div>
     <div class="m"><span id="dirnote"></span> <button class="link" id="chg" hidden>Change save folder</button></div>
   </div>
   <ul id="list"></ul>
@@ -108,7 +111,7 @@ const NOTES={
   lan:"Both devices must be on the same Wi-Fi or local network. Files stay on that network; only the initial handshake uses the internet.",
   any:"Files travel directly between the devices over the internet, never through a server. Some networks, such as mobile data, may block direct connections."};
 const CHUNK=65536, BIG=1<<20, TTL=6e5, VIEWS=["vHome","vHost","vJoin","vLive"], HAS_DIR=!!window.showDirectoryPicker;
-let mode="lan",peer,conn,timer,waiter,lock,dir,cur,rx,busy,wl,hostLink,route="",peerName="Other device",q=Promise.resolve();
+let mode="lan",peer,conn,timer,waiter,lock,dir,cur,rx,busy,wl,hostLink,route="",peerName="Other device",role,tid,sid,lost,up,retry,hb,seen=0,tx,trying,q=Promise.resolve();
 try{mode=localStorage.getItem("ld.mode")==="any"?"any":"lan"}catch{}
 
 // Replacing `config` removes PeerJS's built-in TURN relay, so files can never be relayed.
@@ -127,10 +130,10 @@ function setMode(m){mode=m;try{localStorage.setItem("ld.mode",m)}catch{}
 $("modes").onclick=e=>{if(e.target.dataset.m)setMode(e.target.dataset.m)};
 
 function reset(){
-  clearTimeout(timer);try{conn&&conn.close()}catch{}try{peer&&peer.destroy()}catch{}
+  clearTimeout(timer);clearInterval(retry);clearInterval(hb);try{conn&&conn.close()}catch{}try{peer&&peer.destroy()}catch{}
   try{wl&&wl.release()}catch{}
-  conn=peer=waiter=cur=rx=wl=dir=null;lock=busy=false;q=Promise.resolve();
-  $("list").innerHTML="";$("pA").hidden=true;view("vHome")}
+  conn=peer=waiter=cur=rx=tx=wl=dir=role=tid=sid=null;lock=busy=lost=up=trying=false;q=Promise.resolve();
+  $("list").innerHTML="";$("pA").hidden=true;$("banner").hidden=true;view("vHome")}
 const fail=m=>{reset();say(m,true)};
 
 async function pid(p){
@@ -158,13 +161,24 @@ async function check(c){
 
 // ---------- Session setup ----------
 async function host(){
-  reset();view("vHost");say("");
+  reset();view("vHost");say("");holdAwake();
   const phrase=gen();$("phrase").textContent=phrase;
   hostLink=location.origin+location.pathname+"#j="+phrase+"&m="+mode;
   const qr=qrcode(0,"M");qr.addData(hostLink);qr.make();$("qr").src=qr.createDataURL(5,4);
-  peer=new Peer(await pid(phrase),{config:cfg()});
-  peer.on("error",e=>fail("The connection service is unavailable ("+e.type+"). Please try again."));
-  peer.on("connection",c=>{
+  role="host";sid=[...crypto.getRandomValues(new Uint8Array(16))].map(b=>b.toString(16).padStart(2,"0")).join("");
+  const p=peer=new Peer(await pid(phrase),{config:cfg()});
+  p.on("error",e=>{if(!lock)fail("The connection service is unavailable ("+e.type+"). Please try again.")});
+  p.on("disconnected",()=>setTimeout(()=>{try{if(peer===p&&!p.destroyed)p.reconnect()}catch{}},2000));
+  p.on("connection",c=>{
+    if(lost){ // only the original joiner, proving it holds the session key, may resume
+      let ok=false;
+      c.on("data",d=>{
+        if(ok)return onData(d);
+        let m;try{m=JSON.parse(d)}catch{}
+        if(lost&&m&&m.t==="resume"&&m.s===sid){ok=true;c.send(JSON.stringify({t:"resumed"}));c.on("close",()=>gone(c));resumed(c)}
+        else c.close();
+      });
+      return}
     if(lock){c.close();return}
     lock=true;conn=c;c.on("data",onData);c.on("close",()=>gone(c));
     c.on("open",()=>established(c));
@@ -174,25 +188,95 @@ async function host(){
 
 async function join(){
   const phrase=norm($("inp").value);if(!phrase)return;
-  reset();view("vJoin");say("Connecting…");
+  reset();view("vJoin");say("Connecting…");role="join";tid=await pid(phrase);holdAwake();
   peer=new Peer({config:cfg()});
   peer.on("error",e=>{clearTimeout(timer);view("vJoin");
     say(e.type==="peer-unavailable"?"No session was found for this code. Check the code, or start a new session on the other device.":"The connection service is unavailable ("+e.type+"). Please try again.",true)});
   peer.on("open",async()=>{
-    conn=peer.connect(await pid(phrase),{serialization:"raw",reliable:true});
-    conn.on("data",onData);conn.on("close",()=>gone(conn));
-    conn.on("open",()=>{clearTimeout(timer);established(conn)});
+    const c=conn=peer.connect(tid,{serialization:"raw",reliable:true});
+    c.on("data",onData);c.on("close",()=>gone(c));
+    c.on("open",()=>{clearTimeout(timer);established(c)});
   });
   timer=setTimeout(()=>{reset();view("vJoin");say("The connection timed out. Confirm the code and the connection type on both devices.",true)},25000);
 }
 
-const gone=c=>{if(conn===c){reset();say("The other device disconnected.",true)}};
+const gone=c=>{
+  if(!c||conn!==c)return;
+  if(!up){reset();say("The connection could not be established.",true);return}
+  lose();
+};
+
+// ---------- Reconnection ----------
+// The session stays open for 2 minutes. The host keeps its code registered; the joiner retries
+// every few seconds and proves it belongs to the session with a key sent over the encrypted channel.
+function lose(){
+  if(lost)return;lost=true;
+  const old=conn;conn=null;waiter=null;busy=false;
+  const msg="Transfer interrupted. Send the files again once reconnected.";
+  if(cur){cur.w&&cur.w.abort().catch(()=>{});cur=null}
+  if(rx){rx.row.set(null,msg,true);rx=null}
+  if(tx){tx.set(null,msg,true);tx=null}
+  q=Promise.resolve();$("pA").hidden=true;clearInterval(hb);
+  try{old&&old.close()}catch{}
+  if(role==="join"&&!sid)return fail("The connection was lost. Start a new session.");
+  $("banner").textContent=role==="join"?"Connection lost. Reconnecting…":"Connection lost. Waiting for the other device to reconnect…";
+  $("banner").hidden=false;
+  clearTimeout(timer);timer=setTimeout(()=>fail("Could not reconnect. Start a new session."),12e4);
+  clearInterval(retry);retry=setInterval(kick,3000);kick();
+}
+function kick(){
+  if(!lost)return;
+  if(role==="join")attempt();
+  else if(peer&&peer.disconnected&&!peer.destroyed){try{peer.reconnect()}catch{}}
+}
+function attempt(){
+  if(trying)return;trying=true;
+  try{peer&&peer.destroy()}catch{}
+  const p=peer=new Peer({config:cfg()});
+  const end=()=>{trying=false},to=setTimeout(()=>{try{p.destroy()}catch{}end()},10000);
+  p.on("error",()=>{clearTimeout(to);end()});
+  p.on("open",()=>{
+    const c=p.connect(tid,{serialization:"raw",reliable:true});let ok=false;
+    c.on("data",d=>{
+      if(ok)return onData(d);
+      let m;try{m=JSON.parse(d)}catch{}
+      if(m&&m.t==="resumed"){ok=true;clearTimeout(to);end();c.on("close",()=>gone(c));resumed(c)}
+    });
+    c.on("open",()=>c.send(JSON.stringify({t:"resume",s:sid})));
+    c.on("close",end);
+  });
+}
+async function resumed(c){
+  conn=c;
+  if(!await check(c))return;
+  lost=false;clearInterval(retry);clearTimeout(timer);beat();
+  $("banner").hidden=true;addRow("Connection restored.");
+}
+// Both sides ping every 5 seconds; 15 seconds of silence counts as a lost connection.
+function beat(){
+  clearInterval(hb);seen=Date.now();
+  hb=setInterval(()=>{
+    if(!conn||lost)return;
+    try{conn.send(JSON.stringify({t:"ping"}))}catch{}
+    if(Date.now()-seen>15000)gone(conn);
+  },5000);
+}
 
 async function established(c){
   if(!await check(c))return;
-  c.send(JSON.stringify({t:"hello",n:devName()}));
-  say("");renderLive();view("vLive");
-  try{navigator.wakeLock&&navigator.wakeLock.request("screen").then(l=>wl=l).catch(()=>{})}catch{}
+  c.send(JSON.stringify({t:"hello",n:devName(),s:role==="host"?sid:undefined}));
+  up=true;beat();say("");renderLive();view("vLive");
+  holdAwake();
+}
+// Keeps the screen on for the whole session, including while waiting to connect or reconnect.
+// Browsers release the lock when the page is hidden; it is requested again when the page returns.
+async function holdAwake(){
+  const n=$("awakenote");
+  if(!("wakeLock" in navigator)){n.textContent="This browser cannot keep the screen on. Increase the auto-lock time in your device settings.";return}
+  if(!$("awake").checked){try{wl&&wl.release()}catch{}wl=null;n.textContent="";return}
+  if(wl&&!wl.released)return;
+  try{wl=await navigator.wakeLock.request("screen");n.textContent="The screen stays on while this page is open."}
+  catch{n.textContent="The screen could not be kept on. Battery saver mode may be blocking it."}
 }
 function renderLive(){
   $("peerName").textContent="Connected to "+peerName;$("route").textContent=route;
@@ -208,9 +292,12 @@ function addRow(t){
 
 function onData(d){
   const run=f=>{q=q.then(f).catch(e=>addRow("").set(null,"Error: "+e.message,true))};
+  seen=Date.now();
   if(typeof d!=="string"){run(()=>chunk(d));return}
   const m=JSON.parse(d);
-  if(m.t==="hello"){peerName=m.n||peerName;renderLive()}
+  if(m.t==="hello"){peerName=m.n||peerName;if(m.s)sid=m.s;renderLive()}
+  else if(m.t==="ping"){}
+  else if(m.t==="bye"){reset();say("The other device ended the session.")}
   else if(m.t==="accept"||m.t==="reject"){const w=waiter;waiter=null;w&&w(m)}
   else run(()=>handle(m));
 }
@@ -255,11 +342,18 @@ async function chunk(d){
 }
 
 async function sendFiles(fs){
-  if(!fs.length||busy||!conn)return;busy=true;
+  if(!fs.length||busy)return;
+  if(!conn){say("Not connected. Wait for the connection to be restored.",true);return}
+  busy=true;
   const dc=conn.dataChannel;dc.bufferedAmountLowThreshold=BIG;
-  const flow=async()=>{if(dc.bufferedAmount>4*BIG)await new Promise(r=>dc.onbufferedamountlow=r)};
+  const lostErr=()=>new Error("The connection was lost.");
+  const flow=async()=>{
+    if(dc.readyState!=="open")throw lostErr();
+    if(dc.bufferedAmount>4*BIG){
+      await new Promise(r=>{dc.onbufferedamountlow=r;dc.addEventListener("close",r,{once:true})});
+      if(dc.readyState!=="open")throw lostErr()}};
   const total=fs.reduce((a,f)=>a+f.size,0)||1;
-  const row=addRow(`Waiting for ${peerName} to accept ${plural(fs.length)}…`);
+  const row=tx=addRow(`Waiting for ${peerName} to accept ${plural(fs.length)}…`);
   try{
     conn.send(JSON.stringify({t:"offer",files:fs.map(f=>({name:f.name,size:f.size}))}));
     const a=await new Promise(r=>waiter=r);
@@ -276,9 +370,10 @@ async function sendFiles(fs){
       conn.send(JSON.stringify({t:"end"}));
     }
     while(dc.bufferedAmount>0)await new Promise(r=>setTimeout(r,100));
+    if(dc.readyState!=="open")throw lostErr();
     row.set(1,`Sent ${plural(fs.length)} (${fmt(total)}).`);
   }catch(e){row.set(null,"Transfer failed: "+e.message,true)}
-  finally{busy=false}
+  finally{busy=false;tx=null}
 }
 
 // ---------- Interface ----------
@@ -289,17 +384,26 @@ $("go").onclick=join;
 $("inp").onkeydown=e=>{if(e.key==="Enter")join()};
 $("jx").onclick=()=>{reset();say("")};
 $("cx").onclick=()=>{reset();say("")};
-$("bye").onclick=()=>{reset();say("")};
+$("bye").onclick=()=>{try{conn&&conn.send(JSON.stringify({t:"bye"}))}catch{}setTimeout(()=>{reset();say("")},150)};
 $("cc").onclick=()=>copy($("phrase").textContent,$("cc"));
 if(navigator.share)$("cl").textContent="Share link";
 $("cl").onclick=()=>navigator.share?navigator.share({title:"Local Drop",url:hostLink}).catch(()=>{}):copy(hostLink,$("cl"));
 $("pick").onclick=()=>$("fi").click();
 $("fi").onchange=e=>{sendFiles([...e.target.files]);e.target.value=""};
 $("chg").onclick=pickDir;
+try{$("awake").checked=localStorage.getItem("ld.awake")!=="0"}catch{}
+$("awake").onchange=()=>{try{localStorage.setItem("ld.awake",$("awake").checked?"1":"0")}catch{}holdAwake()};
 const dz=$("drop");
 dz.ondragover=e=>{e.preventDefault();dz.classList.add("o")};
 dz.ondragleave=()=>dz.classList.remove("o");
 dz.ondrop=e=>{e.preventDefault();dz.classList.remove("o");sendFiles([...e.dataTransfer.files])};
+
+// Returning to the page (for example on a phone) retries a lost connection immediately.
+document.addEventListener("visibilitychange",()=>{
+  if(document.hidden)return;
+  if(up||role)holdAwake();
+  if(lost)kick();
+});
 
 setMode(mode);view("vHome");
 // Opening a session link (or scanning its QR code) joins automatically.
