@@ -1,6 +1,6 @@
 {
-  "name": "Local Drop",
-  "short_name": "Local Drop",
+  "name": "Direct Drop",
+  "short_name": "Direct Drop",
   "description": "Direct file transfer between your devices",
   "start_url": ".",
   "scope": ".",

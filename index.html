@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0b7a75">
-<title>Local Drop</title>
+<title>Direct Drop</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230b7a75'/%3E%3Cpath d='M16 7v13m0 0-5-5m5 5 5-5M9 25h14' stroke='white' stroke-width='3' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
@@ -48,7 +48,7 @@ progress{display:block;width:100%;height:8px;margin-top:8px}
 <main>
 <div class="hd">
   <div>
-    <h1>Local Drop</h1>
+    <h1>Direct Drop</h1>
     <p class="s" data-t>Direct file transfer between your devices. Files are never uploaded to a server.</p>
   </div>
   <select id="lang" aria-label="Language"><option value="en">English</option><option value="ja">日本語</option></select>
@@ -149,7 +149,7 @@ progress{display:block;width:100%;height:8px;margin-top:8px}
 <script>window.qrcode||document.write('<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"><\/script>')</script>
 <script>
 const $=id=>document.getElementById(id);
-const VERSION="1.5.0",BUILT='2026-11-07 12:26';
+const VERSION="1.5.1",BUILT='2026-11-07 17:57';
 
 // ---------- Languages ----------
 // English text is the key. Add a language by adding a dictionary here and an option to the menu.
@@ -476,7 +476,7 @@ function notifyDone(msg){
   if($("sound").checked){beep();try{navigator.vibrate&&navigator.vibrate(200)}catch{}}
   if(document.hidden){
     document.title="✓ "+msg;
-    try{if("Notification" in window&&Notification.permission==="granted")new Notification("Local Drop",{body:msg,tag:"ld-done",silent:!$("sound").checked})}catch{}
+    try{if("Notification" in window&&Notification.permission==="granted")new Notification("Direct Drop",{body:msg,tag:"ld-done",silent:!$("sound").checked})}catch{}
   }
 }
 const permUi=()=>{$("allown").hidden=!($("notify").checked&&"Notification" in window&&Notification.permission==="default")};
@@ -619,7 +619,7 @@ async function handle(m){
     cur=null;rx.n++;
     if(rx.n===rx.count){
       if(rx.z){const e=zEnd(rx.z.list,rx.z.dt,rx.z.off);await work({op:"write",buf:e.buffer},[e.buffer]);
-        save((await work({op:"close"})).file,"LocalDrop-"+new Date().toISOString().slice(0,19).replace(/[-:T]/g,"")+".zip")}
+        save((await work({op:"close"})).file,"DirectDrop-"+new Date().toISOString().slice(0,19).replace(/[-:T]/g,"")+".zip")}
       rx.row.set(1,tr(rx.z?"Received {0} ({1}) as one ZIP file.":dir?"Received {0} ({1}) and saved to your folder.":"Received {0} ({1}).",plural(rx.count),fmt(rx.total)));
       doneId=rx.id;try{conn.send(JSON.stringify({t:"done",id:rx.id}))}catch{}rx=null;notifyDone(tr("Transfer complete"));
     }
@@ -738,7 +738,7 @@ $("jx").onclick=()=>{reset();say("")};
 $("cx").onclick=()=>{reset();say("")};
 $("bye").onclick=()=>{try{conn&&conn.send(JSON.stringify({t:"bye"}))}catch{}setTimeout(()=>{reset();say("")},150)};
 $("cc").onclick=()=>copy($("phrase").textContent,$("cc"));
-$("cl").onclick=()=>navigator.share?navigator.share({title:"Local Drop",url:hostLink}).catch(()=>{}):copy(hostLink,$("cl"));
+$("cl").onclick=()=>navigator.share?navigator.share({title:"Direct Drop",url:hostLink}).catch(()=>{}):copy(hostLink,$("cl"));
 $("pick").onclick=()=>$("fi").click();
 $("pickd").onclick=()=>$("fo").click();
 $("fi").onchange=e=>{sendFiles([...e.target.files]);e.target.value=""};
@@ -763,7 +763,7 @@ $("lang").onchange=()=>setLang($("lang").value,true);
 document.addEventListener("pointerdown",unlockAudio,{once:true});
 document.addEventListener("visibilitychange",()=>{
   if(document.hidden)return;
-  document.title="Local Drop";
+  document.title="Direct Drop";
   if(up||role)holdAwake();
   if(lost)kick();
 });
