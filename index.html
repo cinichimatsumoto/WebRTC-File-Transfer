@@ -2,120 +2,238 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0b7a75">
 <title>Local Drop</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230b7a75'/%3E%3Cpath d='M16 7v13m0 0-5-5m5 5 5-5M9 25h14' stroke='white' stroke-width='3' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
 <style>
 :root{--bg:#eef2f3;--card:#fff;--tx:#14232b;--mut:#5d7079;--ac:#0b7a75;--acx:#fff;--bd:#cfd9dc;--er:#b42318}
 @media(prefers-color-scheme:dark){:root{--bg:#0e1a1f;--card:#15262d;--tx:#e6f0f1;--mut:#92a8ae;--ac:#3cc4b9;--acx:#06201e;--bd:#27414a;--er:#ff8a7a}}
 *{box-sizing:border-box}
 [hidden]{display:none!important}
-body{margin:0;font:16px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--bg);color:var(--tx);padding:28px 16px}
+body{margin:0;font:16px/1.5 system-ui,-apple-system,"Segoe UI","Hiragino Sans","Yu Gothic UI",Meiryo,sans-serif;background:var(--bg);color:var(--tx);padding:28px 16px}
 main{max-width:520px;margin:0 auto}
 h1{font-size:26px;margin:0 0 4px;letter-spacing:-.02em}
 h2{font-size:17px;margin:0 0 10px}
+.hd{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
 .s{color:var(--mut);margin:0 0 20px}
 .m{color:var(--mut);font-size:14px;margin:8px 0}
 .e{color:var(--er)}
 .card{background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:16px;margin-bottom:12px}
 .row{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
 .top{display:flex;justify-content:space-between;align-items:center;gap:12px}
-button{font:inherit;padding:10px 16px;border-radius:8px;border:1px solid var(--bd);background:var(--card);color:var(--tx);cursor:pointer}
+button,select{font:inherit;padding:10px 16px;border-radius:8px;border:1px solid var(--bd);background:var(--card);color:var(--tx);cursor:pointer}
+select{padding:6px 8px}
 button.p{background:var(--ac);border-color:var(--ac);color:var(--acx);font-weight:600}
 button.link{border:0;background:none;padding:0;color:var(--ac);text-decoration:underline}
 .seg{display:flex;border:1px solid var(--bd);border-radius:8px;overflow:hidden}
 .seg button{flex:1;border:0;border-radius:0}
 .seg button.on{background:var(--ac);color:var(--acx);font-weight:600}
-button:focus-visible,input:focus-visible{outline:3px solid var(--ac);outline-offset:2px}
-input[type=text]{font:inherit;width:100%;padding:10px;border-radius:8px;border:1px solid var(--bd);background:var(--bg);color:var(--tx)}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px solid var(--ac);outline-offset:2px}
+input[type=text],textarea{font:inherit;width:100%;padding:10px;border-radius:8px;border:1px solid var(--bd);background:var(--bg);color:var(--tx)}
+textarea{resize:vertical;margin-top:12px}
 .ph{font:600 22px ui-monospace,Consolas,monospace;word-break:break-word;margin:4px 0 12px}
 #qr{display:block;background:#fff;padding:6px;border-radius:8px;image-rendering:pixelated;margin-bottom:8px}
 #drop{border:2px dashed var(--bd);border-radius:10px;padding:24px;text-align:center}
 #drop.o{border-color:var(--ac)}
 #list{list-style:none;margin:0;padding:0}
 #list li{background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:12px 16px;margin-bottom:8px;font-size:14px}
+.tx{white-space:pre-wrap;word-break:break-word;max-height:160px;overflow:auto}
 progress{display:block;width:100%;height:8px;margin-top:8px}
 </style>
 </head>
 <body>
 <main>
-<h1>Local Drop</h1>
-<p class="s">Direct file transfer between your devices. Files are never uploaded to a server.</p>
+<div class="hd">
+  <div>
+    <h1>Local Drop</h1>
+    <p class="s" data-t>Direct file transfer between your devices. Files are never uploaded to a server.</p>
+  </div>
+  <select id="lang" aria-label="Language"><option value="en">English</option><option value="ja">日本語</option></select>
+</div>
 <p id="msg" hidden></p>
 
 <section id="vHome" class="card">
-  <h2>Connection type</h2>
-  <div class="seg" id="modes" role="group" aria-label="Connection type">
-    <button data-m="lan">Local network</button>
-    <button data-m="any">Internet</button>
+  <h2 data-t>Connection type</h2>
+  <div class="seg" id="modes" role="group">
+    <button data-m="lan" data-t>Local network</button>
+    <button data-m="any" data-t>Internet</button>
   </div>
   <p class="m" id="note"></p>
   <div class="row">
-    <button class="p" id="bH">Start a session</button>
-    <button id="bJ">Join a session</button>
+    <button class="p" id="bH" data-t>Start a session</button>
+    <button id="bJ" data-t>Join a session</button>
   </div>
-  <p class="m">Start a session on one device and join it from the other. Once connected, either device can send files.</p>
+  <p class="m" data-t>Start a session on one device and join it from the other. Once connected, either device can send files.</p>
 </section>
 
 <section id="vHost" class="card" hidden>
-  <h2>Session code</h2>
+  <h2 data-t>Session code</h2>
   <div class="ph" id="phrase"></div>
-  <img id="qr" alt="QR code for this session">
-  <p class="m">Enter this code on the other device, or scan the QR code with its camera. The code works for one connection and expires after 10 minutes.</p>
+  <img id="qr" alt="">
+  <p class="m" data-t>Enter this code on the other device, or scan the QR code with its camera. The code works for one connection and expires after 10 minutes.</p>
   <div class="row">
-    <button id="cc">Copy code</button>
-    <button id="cl">Copy link</button>
-    <button id="nc">New code</button>
-    <button id="own">Use my own phrase</button>
-    <button id="cx">Cancel</button>
+    <button id="cc" data-t>Copy code</button>
+    <button id="cl" data-t>Copy link</button>
+    <button id="nc" data-t>New code</button>
+    <button id="own" data-t>Use my own phrase</button>
+    <button id="cx" data-t>Cancel</button>
   </div>
   <div id="ownrow" hidden>
-    <label for="ownin" class="m">Your own phrase (at least 10 characters, case-sensitive)</label>
+    <label for="ownin" class="m" data-t>Your own phrase (at least 10 characters, case-sensitive)</label>
     <input type="text" id="ownin" autocapitalize="none" autocomplete="off" spellcheck="false">
-    <div class="row"><button class="p" id="ownok">Use this phrase</button></div>
+    <div class="row"><button class="p" id="ownok" data-t>Use this phrase</button></div>
     <p class="m" id="ownmsg"></p>
   </div>
 </section>
 
 <section id="vJoin" class="card" hidden>
-  <h2>Join a session</h2>
-  <label for="inp" class="m">Session code shown on the other device</label>
+  <h2 data-t>Join a session</h2>
+  <label for="inp" class="m" data-t>Session code shown on the other device</label>
   <input type="text" id="inp" autocapitalize="none" autocomplete="off" spellcheck="false" placeholder="maple-river-lamp-stone-42">
   <div class="row">
-    <button class="p" id="go">Join</button>
-    <button id="jx">Back</button>
+    <button class="p" id="go" data-t>Join</button>
+    <button id="jx" data-t>Back</button>
   </div>
 </section>
 
 <section id="vLive" hidden>
   <div class="card top">
     <div><strong id="peerName"></strong><div class="m" id="route" style="margin:0"></div></div>
-    <button id="bye">Disconnect</button>
+    <button id="bye" data-t>Disconnect</button>
   </div>
   <p class="m e" id="banner" hidden></p>
   <div class="card" id="pA" hidden>
-    <h2>Incoming files</h2>
+    <h2 data-t>Incoming files</h2>
     <div id="ask"></div>
-    <div class="row"><button class="p" id="yes">Accept</button><button id="no">Decline</button></div>
+    <div class="row"><button class="p" id="yes" data-t>Accept</button><button id="no" data-t>Decline</button></div>
   </div>
   <div class="card">
-    <div id="drop">Drag files here or <button class="link" id="pick">select files</button> to send<input type="file" id="fi" multiple hidden></div>
-    <label class="m" style="display:block"><input type="checkbox" id="auto"> Accept incoming files automatically</label>
-    <label class="m" style="display:block" id="ziprow"><input type="checkbox" id="zip" checked> Receive several files as one ZIP, so the browser asks only once</label>
-    <label class="m" style="display:block"><input type="checkbox" id="awake" checked> Keep this device awake while connected</label>
+    <div id="drop">
+      <span data-t>Drag files or folders here, or</span> <button class="link" id="pick" data-t>select files</button> <span data-t>or</span> <button class="link" id="pickd" data-t>select a folder</button>
+      <input type="file" id="fi" multiple hidden>
+      <input type="file" id="fo" webkitdirectory multiple hidden>
+    </div>
+    <textarea id="txt" rows="2" maxlength="20000" data-tp="Type or paste text to send"></textarea>
+    <div class="row">
+      <button class="p" id="sendtxt" data-t>Send text</button>
+      <button id="pasteb" data-t>Send clipboard</button>
+    </div>
+  </div>
+  <div class="card">
+    <h2 data-t>Options</h2>
+    <label class="m" style="display:block"><input type="checkbox" id="auto"> <span data-t>Accept incoming files automatically</span></label>
+    <label class="m" style="display:block"><input type="checkbox" id="awake" checked> <span data-t>Keep this device awake while connected</span></label>
+    <label class="m" style="display:block" id="ziprow"><input type="checkbox" id="zip" checked> <span data-t>Receive several files or folders as one ZIP, so the browser asks only once</span></label>
+    <label class="m" style="display:block"><input type="checkbox" id="notify" checked> <span data-t>Notify me when a transfer finishes</span></label>
+    <label class="m" style="display:block"><input type="checkbox" id="sound" checked> <span data-t>Play a sound</span></label>
+    <div class="m"><button class="link" id="allown" hidden data-t>Allow system notifications</button></div>
     <div class="m" id="awakenote" style="margin-top:0"></div>
-    <div class="m"><span id="dirnote"></span> <button class="link" id="chg" hidden>Change save folder</button></div>
+    <div class="m"><span id="dirnote"></span> <button class="link" id="chg" hidden data-t>Change save folder</button></div>
   </div>
   <ul id="list"></ul>
 </section>
-<footer class="m" id="ver" style="text-align:center;margin:24px 0 0"></footer>
+
+<footer class="m" style="text-align:center;margin-top:24px">
+  <div id="ver"></div>
+  <button class="link" id="inst" hidden data-t>Install as an app</button>
+  <div id="ioshint" hidden data-t>To install this page as an app, tap Share, then Add to Home Screen.</div>
+</footer>
 </main>
 
-<script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
+<script src="vendor/peerjs.min.js"></script>
+<script>window.Peer||document.write('<script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"><\/script>')</script>
+<script src="vendor/qrcode.js"></script>
+<script>window.qrcode||document.write('<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"><\/script>')</script>
 <script>
 const $=id=>document.getElementById(id);
-const VERSION="1.4.0",BUILT='2026-11-07 11:08';
+const VERSION="1.5.0",BUILT='2026-11-07 12:26';
+
+// ---------- Languages ----------
+// English text is the key. Add a language by adding a dictionary here and an option to the menu.
+const JA={
+"Direct file transfer between your devices. Files are never uploaded to a server.":"デバイス間で直接ファイルを転送します。ファイルはサーバーにアップロードされません。",
+"Connection type":"接続方法","Local network":"ローカルネットワーク","Internet":"インターネット",
+"Start a session":"セッションを開始","Join a session":"セッションに参加",
+"Start a session on one device and join it from the other. Once connected, either device can send files.":"一方のデバイスでセッションを開始し、もう一方から参加してください。接続後は、どちらのデバイスからでもファイルを送信できます。",
+"Both devices must be on the same Wi-Fi or local network. Files stay on that network; only the initial handshake uses the internet.":"両方のデバイスが同じWi-Fiまたはローカルネットワークに接続されている必要があります。ファイルはそのネットワーク内にとどまり、最初の接続確認にのみインターネットを使用します。",
+"Files travel directly between the devices over the internet, never through a server. Some networks, such as mobile data, may block direct connections.":"ファイルはサーバーを経由せず、インターネット経由でデバイス間を直接移動します。モバイルデータ通信など、一部のネットワークでは直接接続が遮断される場合があります。",
+"Session code":"セッションコード",
+"Enter this code on the other device, or scan the QR code with its camera. The code works for one connection and expires after 10 minutes.":"もう一方のデバイスでこのコードを入力するか、カメラでQRコードを読み取ってください。コードは1回の接続にのみ有効で、10分後に失効します。",
+"Copy code":"コードをコピー","Copy link":"リンクをコピー","Share link":"リンクを共有","New code":"新しいコード","Use my own phrase":"自分のフレーズを使う","Cancel":"キャンセル",
+"Your own phrase (at least 10 characters, case-sensitive)":"自分のフレーズ（10文字以上、大文字と小文字を区別します）","Use this phrase":"このフレーズを使う",
+"Use at least 10 characters. A longer phrase is safer.":"10文字以上にしてください。長いフレーズほど安全です。",
+"Session code shown on the other device":"もう一方のデバイスに表示されているセッションコード","Join":"参加","Back":"戻る",
+"Disconnect":"切断","Incoming files":"受信するファイル","Accept":"受け入れる","Decline":"拒否",
+"Drag files or folders here, or":"ファイルまたはフォルダーをここにドラッグするか、","select files":"ファイルを選択","or":"または","select a folder":"フォルダーを選択",
+"Send text":"テキストを送信","Send clipboard":"クリップボードを送信","Type or paste text to send":"送信するテキストを入力または貼り付け",
+"Options":"オプション","Accept incoming files automatically":"受信ファイルを自動的に受け入れる","Keep this device awake while connected":"接続中はこのデバイスをスリープさせない",
+"Receive several files or folders as one ZIP, so the browser asks only once":"複数のファイルやフォルダーを1つのZIPとして受信する（ブラウザーの確認が1回で済みます）",
+"Notify me when a transfer finishes":"転送が完了したら通知する","Play a sound":"音を鳴らす","Allow system notifications":"システム通知を許可する","Change save folder":"保存先フォルダーを変更",
+"Install as an app":"アプリとしてインストール","To install this page as an app, tap Share, then Add to Home Screen.":"このページをアプリとして追加するには、共有ボタンをタップし、「ホーム画面に追加」を選択してください。",
+"Version {0} · Updated {1}":"バージョン {0} · 更新日 {1}","QR code for this session":"このセッションのQRコード",
+"Other device":"他のデバイス","iPhone":"iPhone","iPad":"iPad","Android device":"Androidデバイス","Windows PC":"Windows PC","Mac":"Mac","Linux PC":"Linux PC",
+"Connected to {0}":"{0} に接続しました","Internet, direct connection":"インターネット（直接接続）","Direct connection":"直接接続",
+"The other device runs version {0}. Reload its page to update.":"相手のデバイスはバージョン {0} を使用しています。ページを再読み込みして更新してください。",
+"Received files are saved to a folder you choose.":"受信したファイルは、選択したフォルダーに保存されます。",
+"This browser downloads each received file when its transfer completes.":"このブラウザーでは、転送が完了するたびに受信ファイルがダウンロードされます。",
+"This browser cannot keep the screen on. Increase the auto-lock time in your device settings.":"このブラウザーでは画面をオンのままにできません。デバイスの設定で自動ロックの時間を長くしてください。",
+"The screen stays on while this page is open.":"このページを開いている間、画面はオンのままになります。",
+"The screen could not be kept on. Battery saver mode may be blocking it.":"画面をオンのままにできませんでした。バッテリーセーバーモードが原因の可能性があります。",
+"Connection lost. Reconnecting…":"接続が切れました。再接続しています…",
+"Connection lost. Waiting for the other device to reconnect…":"接続が切れました。相手のデバイスの再接続を待っています…",
+"Connection lost. Waiting to resume…":"接続が切れました。再開を待っています…","Connection restored. Resuming…":"接続が復旧しました。転送を再開しています…",
+"The connection service is unavailable ({0}). Please try again.":"接続サービスを利用できません（{0}）。もう一度お試しください。",
+"The session code expired. Start a new session.":"セッションコードの有効期限が切れました。新しいセッションを開始してください。",
+"Connecting…":"接続しています…",
+"No session was found for this code. Check the code, or start a new session on the other device.":"このコードのセッションが見つかりません。コードを確認するか、もう一方のデバイスで新しいセッションを開始してください。",
+"The connection timed out. Confirm the code and the connection type on both devices.":"接続がタイムアウトしました。両方のデバイスでコードと接続方法を確認してください。",
+"The connection could not be established.":"接続を確立できませんでした。",
+"The other device could not be verified. The session code may be wrong, or the connection was intercepted. Start a new session.":"相手のデバイスを確認できませんでした。セッションコードが違うか、通信が傍受された可能性があります。新しいセッションを開始してください。",
+"The other device ended the session.":"相手のデバイスがセッションを終了しました。",
+"Could not reconnect. Start a new session.":"再接続できませんでした。新しいセッションを開始してください。",
+"The connection was lost. Start a new session.":"接続が切れました。新しいセッションを開始してください。",
+"The connection type could not be determined. Please try again.":"接続の種類を判定できませんでした。もう一度お試しください。",
+"This connection is not on your local network ({0} to {1}). Connect both devices to the same Wi-Fi network, or select Internet.":"この接続はローカルネットワーク上ではありません（{0} と {1}）。両方のデバイスを同じWi-Fiに接続するか、「インターネット」を選択してください。",
+"Copied":"コピーしました","Copy":"コピー","Open link":"リンクを開く",
+"{0} wants to send {1} ({2}): {3}":"{0} が {1}（{2}）を送信しようとしています: {3}",
+"Receiving {0}…":"{0} を受信しています…","Receiving {0} ({1} of {2}): {3}%":"{0} を受信中（{1}/{2}）: {3}%",
+"Declined: this browser cannot receive files larger than {0}. Use a desktop browser.":"拒否しました: このブラウザーでは {0} を超えるファイルを受信できません。パソコンのブラウザーをご利用ください。",
+"Received {0} ({1}).":"{0}（{1}）を受信しました。","Received {0} ({1}) and saved to your folder.":"{0}（{1}）を受信し、フォルダーに保存しました。","Received {0} ({1}) as one ZIP file.":"{0}（{1}）を1つのZIPファイルとして受信しました。",
+"Error: {0}":"エラー: {0}","Unexpected data from the other device.":"相手のデバイスから予期しないデータが届きました。",
+"The received size of {0} did not match the offer.":"{0} の受信サイズが、受け入れた内容と一致しませんでした。",
+"The other device sent more data than expected.":"相手のデバイスが想定より多くのデータを送信しました。","This browser cannot store a file this large.":"このブラウザーでは、これほど大きなファイルを保存できません。",
+"Not connected. Wait for the connection to be restored.":"接続されていません。接続が復旧するまでお待ちください。",
+"Too many files for one transfer. Send them in smaller batches.":"1回の転送にはファイルが多すぎます。分けて送信してください。",
+"Waiting for {0} to accept {1}…":"{0} が {1} を受け入れるのを待っています…","{0} declined the transfer.":"{0} が転送を拒否しました。",
+"Sending {0} ({1} of {2}): {3}%, {4}/s":"{0} を送信中（{1}/{2}）: {3}%、{4}/秒","Sent {0} ({1}).":"{0}（{1}）を送信しました。",
+"Transfer failed: {0}":"転送に失敗しました: {0}","The connection was lost.":"接続が切れました。","The receiving device stopped the transfer.":"受信側のデバイスが転送を中止しました。",
+"The other device did not respond. Send the files again.":"相手のデバイスから応答がありません。ファイルをもう一度送信してください。",
+"The other device no longer has this transfer. Send the files again.":"相手のデバイスにこの転送の情報が残っていません。ファイルをもう一度送信してください。",
+"The session ended.":"セッションが終了しました。",
+"There is no text to send.":"送信するテキストがありません。","The text is too long. The limit is {0} characters.":"テキストが長すぎます。上限は {0} 文字です。",
+"Text sent ({0} characters).":"テキストを送信しました（{0}文字）。","Text received":"テキストを受信しました",
+"The clipboard could not be read. Allow clipboard access, or paste the text into the box.":"クリップボードを読み取れませんでした。アクセスを許可するか、テキストを入力欄に貼り付けてください。",
+"Transfer complete":"転送が完了しました"};
+let lang="en",awakeKey="",bannerKey="";
+const tr=(s,...a)=>((lang==="ja"&&JA[s])||s).replace(/\{(\d)\}/g,(_,i)=>a[i]);
+const plural=n=>lang==="ja"?`${n}個のファイル`:`${n} file${n===1?"":"s"}`;
+function detectLang(){
+  try{const s=localStorage.getItem("ld.lang");if(s==="en"||s==="ja")return s}catch{}
+  for(const l of navigator.languages||[navigator.language||"en"]){const c=String(l).slice(0,2).toLowerCase();if(c==="ja"||c==="en")return c}
+  return"en"}
+function applyLang(){
+  document.querySelectorAll("[data-t]").forEach(e=>{if(!e.dataset.k)e.dataset.k=e.textContent;e.textContent=tr(e.dataset.k)});
+  document.querySelectorAll("[data-tp]").forEach(e=>e.placeholder=tr(e.dataset.tp));
+  $("qr").alt=tr("QR code for this session");$("ver").textContent=tr("Version {0} · Updated {1}",VERSION,BUILT);
+  setMode(mode);awakeMsg(awakeKey);setBanner(bannerKey);if(up)renderLive()}
+function setLang(l,save){
+  lang=l;if(save)try{localStorage.setItem("ld.lang",l)}catch{}
+  document.documentElement.lang=l;$("lang").value=l;applyLang()}
+
+// ---------- Constants and state ----------
 const WORDS=("acorn amber anchor apple arrow aspen atlas badge baker banjo basil beach berry birch blaze bloom brave bread brick brook cabin cactus camel candy canoe cedar chalk charm cherry chess cliff cloud clover cobra comet coral cotton crane creek crown daisy delta denim dune eagle ember fable fairy falcon fern ferry field finch flame flint forest frost galaxy garden ginger glacier grape gravel harbor hazel heron honey igloo iris island ivory jade jelly jungle kayak kite lagoon lantern lemon lilac lotus lunar maple marble meadow melon mint mocha moss nectar noble oasis olive onyx orbit otter panda pearl pepper pine plum pond poppy quartz quill raven reef ridge river robin saffron sage shell silver spruce stone sunny tulip velvet violet walnut willow winter yellow zebra zephyr pebble thunder").split(" ");
 const STUN=[{urls:"stun:stun.l.google.com:19302"},{urls:"stun:stun.cloudflare.com:3478"}];
 const NOTES={
@@ -123,31 +241,40 @@ const NOTES={
   any:"Files travel directly between the devices over the internet, never through a server. Some networks, such as mobile data, may block direct connections."};
 const CHUNK=65536, BIG=1<<20, TTL=6e5, VIEWS=["vHome","vHost","vJoin","vLive"], HAS_DIR=!!window.showDirectoryPicker,
   ACK=4*BIG, WIN=16*BIG, MEMLIM=400*BIG, HAS_OPFS=!!(window.Worker&&navigator.storage&&navigator.storage.getDirectory);
-let mode="lan",peer,conn,timer,waiter,lock,dir,cur,rx,busy,wl,hostLink,route="",peerName="Other device",role,tid,sid,lost,up,retry,hb,seen=0,tx,trying,sentB=0,ackB=0,ackWake,ackOK,cxl,wk,authKey,peerVer,q=Promise.resolve();
+let mode="lan",peer,conn,timer,waiter,lock,dir,cur,rx,busy,wl,hostLink,route="",routeKey="Local network",peerName="",role,tid,sid,lost,up,retry,hb,seen=0,job,trying,
+  sentB=0,ackB=0,ackWake,ackOK,cxl,wk,authKey,peerVer,ep=0,cg=0,reconWait,stWait,decRes,doneId,q=Promise.resolve();
 try{mode=localStorage.getItem("ld.mode")==="any"?"any":"lan"}catch{}
 
 // Replacing `config` removes PeerJS's built-in TURN relay, so files can never be relayed.
 const cfg=()=>({iceServers:mode==="lan"?[]:STUN});
 const view=v=>VIEWS.forEach(i=>$(i).hidden=i!==v);
 const say=(t,err)=>{const s=$("msg");s.textContent=t||"";s.className="m"+(err?" e":"");s.hidden=!t};
+const setBanner=k=>{bannerKey=k||"";$("banner").hidden=!k;$("banner").textContent=k?tr(k):""};
+const awakeMsg=k=>{awakeKey=k;$("awakenote").textContent=k?tr(k):""};
+const pn=()=>tr(peerName||"Other device");
 const fmt=n=>n<1e6?(n/1e3).toFixed(0)+" KB":n<1e9?(n/1e6).toFixed(1)+" MB":(n/1e9).toFixed(2)+" GB";
 const clean=(t,n)=>String(t==null?"":t).replace(/[\u0000-\u001f\u007f]/g,"").slice(0,n);
 const safe=n=>{n=clean(n,200).replace(/[\\/:*?"<>|]/g,"_").replace(/^[. ]+|[. ]+$/g,"");return /^(con|prn|aux|nul|com\d|lpt\d)(\..*)?$/i.test(n)?"_"+n:n||"file"};
+const cleanPath=p=>{const a=String(p).split("/").map(x=>x==="."||x===""?"":safe(x)).filter(Boolean);return a.length?a:["file"]};
 const norm=p=>p.trim().toLowerCase().replace(/[\s_.,]+/g,"-").replace(/[^a-z0-9-]/g,"").replace(/-+/g,"-");
 const GEN=/^([a-z]+-){4}\d{2}$/,canon=p=>{const n=norm(p);return GEN.test(n)?n:p.trim()};
-const plural=n=>n+" file"+(n===1?"":"s");
 const devName=()=>{const u=navigator.userAgent;return /iPhone/.test(u)?"iPhone":/iPad/.test(u)?"iPad":/Android/.test(u)?"Android device":/Windows/.test(u)?"Windows PC":/Mac/.test(u)?"Mac":/Linux/.test(u)?"Linux PC":"Other device"};
 
 function setMode(m){mode=m;try{localStorage.setItem("ld.mode",m)}catch{}
-  $("note").textContent=NOTES[m];
+  $("note").textContent=tr(NOTES[m]);
   document.querySelectorAll("#modes button").forEach(b=>b.classList.toggle("on",b.dataset.m===m))}
 $("modes").onclick=e=>{if(e.target.dataset.m)setMode(e.target.dataset.m)};
 
 function reset(){
-  clearTimeout(timer);clearInterval(retry);clearInterval(hb);try{conn&&conn.close()}catch{}try{peer&&peer.destroy()}catch{}
+  clearTimeout(timer);clearInterval(retry);clearInterval(hb);ep++;
+  try{conn&&conn.close()}catch{}try{peer&&peer.destroy()}catch{}
   try{wl&&wl.release()}catch{}
-  conn=peer=waiter=cur=rx=tx=wl=dir=role=tid=sid=authKey=null;lock=busy=lost=up=trying=ackOK=false;q=Promise.resolve();
-  $("list").innerHTML="";$("pA").hidden=true;$("banner").hidden=true;$("auto").checked=false;view("vHome")}
+  try{cur&&cur.w&&cur.w.abort().catch(()=>{})}catch{}
+  if((rx&&rx.z)||(cur&&cur.o))work({op:"drop"}).catch(()=>{});
+  reconWait&&reconWait.rej(new Error(tr("The session ended.")));
+  decRes&&decRes(false);
+  conn=peer=waiter=cur=rx=job=wl=dir=role=tid=sid=authKey=reconWait=stWait=null;lock=busy=lost=up=trying=ackOK=false;
+  $("list").innerHTML="";$("pA").hidden=true;setBanner();$("auto").checked=false;view("vHome")}
 const fail=m=>{reset();say(m,true)};
 
 // <auth>
@@ -157,7 +284,7 @@ const hex=b=>[...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,"0")).join(
 async function pid(p){
   const te=new TextEncoder(),base=await crypto.subtle.importKey("raw",te.encode(p),"PBKDF2",false,["deriveBits"]);
   const bits=hex(await crypto.subtle.deriveBits({name:"PBKDF2",hash:"SHA-256",salt:te.encode("localdrop-v2"),iterations:200000},base,256));
-  const h=t=>crypto.subtle.digest("SHA-256",te.encode(t+bits));
+  const h=x=>crypto.subtle.digest("SHA-256",te.encode(x+bits));
   authKey=await crypto.subtle.importKey("raw",await h("auth"),{name:"HMAC",hash:"SHA-256"},false,["sign"]);
   return "ld"+hex(await h("id")).slice(0,32)}
 const mac=async(label,pair)=>hex(await crypto.subtle.sign("HMAC",authKey,new TextEncoder().encode(label+"|"+pair)));
@@ -176,13 +303,11 @@ async function handshake(c){
   return(await got)===theirs;
 }
 // </auth>
-function gen(){const r=new Uint32Array(5);crypto.getRandomValues(r);
-  return [0,1,2,3].map(i=>WORDS[r[i]%WORDS.length]).join("-")+"-"+(10+r[4]%90)}
 
 // Confirms the connection that was actually selected. In local mode, anything else is refused.
 const priv=a=>!a||/\.local$/i.test(a)||/^(10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|169\.254\.|100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])\.|f[cd]|fe80)/i.test(a);
 // Two devices on the same IPv6 network share the first 64 bits of their addresses.
-const v6=a=>{if(!a||!a.includes(":"))return null;const [h,t]=a.split("%")[0].split("::"),H=h?h.split(":"):[],T=t?t.split(":"):[];while(a.includes("::")&&H.length+T.length<8)T.unshift("0");return H.concat(T).slice(0,4).map(x=>x.padStart(4,"0")).join("")};
+const v6=a=>{if(!a||!a.includes(":"))return null;const [h,x]=a.split("%")[0].split("::"),H=h?h.split(":"):[],T=x?x.split(":"):[];while(a.includes("::")&&H.length+T.length<8)T.unshift("0");return H.concat(T).slice(0,4).map(y=>y.padStart(4,"0")).join("")};
 const addr=x=>x.address||x.ip;
 const onLink=(l,r)=>{const a=addr(l),b=addr(r);return(priv(a)&&priv(b))||(!!v6(a)&&v6(a)===v6(b))};
 const desc=x=>x.candidateType+" "+(addr(x)||"hidden");
@@ -202,13 +327,13 @@ async function pairOf(c){
 async function check(c){
   const p=await pairOf(c);
   if(!p){
-    if(mode==="any"){route="Direct connection";return true}
-    fail("The connection type could not be determined. Please try again.");return false}
-  const [l,r]=p,t=x=>x.candidateType==="host"||x.candidateType==="prflx";
-  const local=t(l)&&t(r)&&onLink(l,r);
+    if(mode==="any"){routeKey="Direct connection";return true}
+    fail(tr("The connection type could not be determined. Please try again."));return false}
+  const [l,r]=p,ty=x=>x.candidateType==="host"||x.candidateType==="prflx";
+  const local=ty(l)&&ty(r)&&onLink(l,r);
   if(mode==="lan"&&!local){
-    fail(`This connection is not on your local network (${desc(l)} to ${desc(r)}). Connect both devices to the same Wi-Fi network, or select Internet.`);return false}
-  route=local?"Local network":"Internet, direct connection";return true;
+    fail(tr("This connection is not on your local network ({0} to {1}). Connect both devices to the same Wi-Fi network, or select Internet.",desc(l),desc(r)));return false}
+  routeKey=local?"Local network":"Internet, direct connection";return true;
 }
 
 // ---------- Session setup ----------
@@ -218,9 +343,9 @@ async function host(custom){
   const phrase=canon(custom||gen());$("phrase").textContent=phrase;
   hostLink=location.origin+location.pathname+"#j="+encodeURIComponent(phrase)+"&m="+mode;
   try{const qr=qrcode(0,"M");qr.addData(hostLink);qr.make();$("qr").src=qr.createDataURL(5,4);$("qr").hidden=false}catch{$("qr").hidden=true}
-  role="host";sid=[...crypto.getRandomValues(new Uint8Array(16))].map(b=>b.toString(16).padStart(2,"0")).join("");
+  role="host";sid=hex(crypto.getRandomValues(new Uint8Array(16)));
   const p=peer=new Peer(await pid(phrase),{config:cfg()});
-  p.on("error",e=>{if(!lock)fail("The connection service is unavailable ("+e.type+"). Please try again.")});
+  p.on("error",e=>{if(!lock)fail(tr("The connection service is unavailable ({0}). Please try again.",e.type))});
   p.on("disconnected",()=>setTimeout(()=>{try{if(peer===p&&!p.destroyed)p.reconnect()}catch{}},2000));
   p.on("connection",c=>{
     if(lost){ // only the original joiner may resume: it must prove it knows the phrase, then present the session key
@@ -238,45 +363,54 @@ async function host(custom){
     lock=true;conn=c;c.on("data",onData);c.on("close",()=>gone(c));
     c.on("open",()=>established(c));
   });
-  timer=setTimeout(()=>{if(!lock)fail("The session code expired. Start a new session.")},TTL);
+  timer=setTimeout(()=>{if(!lock)fail(tr("The session code expired. Start a new session."))},TTL);
 }
+function gen(){const r=new Uint32Array(5);crypto.getRandomValues(r);
+  return [0,1,2,3].map(i=>WORDS[r[i]%WORDS.length]).join("-")+"-"+(10+r[4]%90)}
 
 async function join(){
   const phrase=canon($("inp").value);if(!phrase)return;
-  reset();view("vJoin");say("Connecting…");role="join";tid=await pid(phrase);holdAwake();
+  reset();view("vJoin");say(tr("Connecting…"));role="join";tid=await pid(phrase);holdAwake();
   peer=new Peer({config:cfg()});
-  peer.on("error",e=>{clearTimeout(timer);view("vJoin");
-    say(e.type==="peer-unavailable"?"No session was found for this code. Check the code, or start a new session on the other device.":"The connection service is unavailable ("+e.type+"). Please try again.",true)});
-  peer.on("open",async()=>{
+  peer.on("error",e=>{
+    if(up||lost)return; // signaling hiccups after connecting do not matter
+    clearTimeout(timer);view("vJoin");
+    say(e.type==="peer-unavailable"?tr("No session was found for this code. Check the code, or start a new session on the other device."):tr("The connection service is unavailable ({0}). Please try again.",e.type),true)});
+  peer.on("open",()=>{
     const c=conn=peer.connect(tid,{serialization:"raw",reliable:true});
     c.on("data",onData);c.on("close",()=>gone(c));
     c.on("open",()=>{clearTimeout(timer);established(c)});
   });
-  timer=setTimeout(()=>{reset();view("vJoin");say("The connection timed out. Confirm the code and the connection type on both devices.",true)},25000);
+  timer=setTimeout(()=>{reset();view("vJoin");say(tr("The connection timed out. Confirm the code and the connection type on both devices."),true)},25000);
 }
 
-const gone=c=>{
-  if(!c||conn!==c)return;
-  if(!up){reset();say("The connection could not be established.",true);return}
-  lose();
-};
+async function established(c){
+  const hs=handshake(c);
+  if(!await check(c))return;
+  if(!await hs){fail(tr("The other device could not be verified. The session code may be wrong, or the connection was intercepted. Start a new session."));return}
+  c.send(JSON.stringify({t:"hello",n:devName(),s:role==="host"?sid:undefined,k:1,v:VERSION}));
+  cg++;up=true;beat();say("");renderLive();view("vLive");holdAwake();
+}
 
 // ---------- Reconnection ----------
 // The session stays open for 2 minutes. The host keeps its code registered; the joiner retries
-// every few seconds and proves it belongs to the session with a key sent over the encrypted channel.
+// every few seconds and proves it belongs to the session. Transfers continue where they stopped.
+const gone=c=>{
+  if(!c||conn!==c)return;
+  if(!up){reset();say(tr("The connection could not be established."),true);return}
+  lose()};
 function lose(){
-  if(lost)return;lost=true;
-  const old=conn;conn=null;waiter=null;busy=false;
-  const msg="Transfer interrupted. Send the files again once reconnected.";
-  if(cur){cur.w&&cur.w.abort().catch(()=>{});cur.o&&work({op:"drop"}).catch(()=>{});cur=null}
-  if(rx){rx.z&&work({op:"drop"}).catch(()=>{});rx.row.set(null,msg,true);rx=null}
-  if(tx){tx.set(null,msg,true);tx=null}
-  q=Promise.resolve();$("pA").hidden=true;clearInterval(hb);
+  if(lost)return;lost=true;ep++; // handlers queued from the old connection are discarded
+  const old=conn;conn=null;clearInterval(hb);$("pA").hidden=true;
+  decRes&&decRes(false);
+  if(waiter){const w=waiter;waiter=null;w({t:"reject",lost:1})}
   try{old&&old.close()}catch{}
-  if(role==="join"&&!sid)return fail("The connection was lost. Start a new session.");
-  $("banner").textContent=role==="join"?"Connection lost. Reconnecting…":"Connection lost. Waiting for the other device to reconnect…";
-  $("banner").hidden=false;
-  clearTimeout(timer);timer=setTimeout(()=>fail("Could not reconnect. Start a new session."),12e4);
+  const w=tr("Connection lost. Waiting to resume…");
+  if(rx)rx.row.set(null,w);
+  if(job)job.row.set(null,w);
+  if(role==="join"&&!sid)return fail(tr("The connection was lost. Start a new session."));
+  setBanner(role==="join"?"Connection lost. Reconnecting…":"Connection lost. Waiting for the other device to reconnect…");
+  clearTimeout(timer);timer=setTimeout(()=>fail(tr("Could not reconnect. Start a new session.")),12e4);
   clearInterval(retry);retry=setInterval(kick,3000);kick();
 }
 function kick(){
@@ -304,8 +438,9 @@ function attempt(){
 async function resumed(c){
   conn=c;
   if(!await check(c))return;
-  lost=false;clearInterval(retry);clearTimeout(timer);beat();
-  $("banner").hidden=true;addRow("Connection restored.");
+  lost=false;cg++;clearInterval(retry);clearTimeout(timer);beat();setBanner();
+  if(rx)rx.row.set(null,tr("Connection restored. Resuming…"));
+  reconWait&&reconWait.res();
 }
 // Both sides ping every 5 seconds; 15 seconds of silence counts as a lost connection.
 function beat(){
@@ -317,58 +452,80 @@ function beat(){
   },5000);
 }
 
-async function established(c){
-  const hs=handshake(c);
-  if(!await check(c))return;
-  if(!await hs){fail("The other device could not be verified. The session code may be wrong, or the connection was intercepted. Start a new session.");return}
-  c.send(JSON.stringify({t:"hello",n:devName(),s:role==="host"?sid:undefined,k:1,v:VERSION}));
-  up=true;beat();say("");renderLive();view("vLive");
-  holdAwake();
-}
-// Keeps the screen on for the whole session, including while waiting to connect or reconnect.
-// Browsers release the lock when the page is hidden; it is requested again when the page returns.
+// Keeps the screen on for the whole session. Browsers release the lock when the page is hidden,
+// so it is requested again when the page returns.
 async function holdAwake(){
-  const n=$("awakenote");
-  if(!("wakeLock" in navigator)){n.textContent="This browser cannot keep the screen on. Increase the auto-lock time in your device settings.";return}
-  if(!$("awake").checked){try{wl&&wl.release()}catch{}wl=null;n.textContent="";return}
+  if(!("wakeLock" in navigator)){awakeMsg("This browser cannot keep the screen on. Increase the auto-lock time in your device settings.");return}
+  if(!$("awake").checked){try{wl&&wl.release()}catch{}wl=null;awakeMsg("");return}
   if(wl&&!wl.released)return;
-  try{wl=await navigator.wakeLock.request("screen");n.textContent="The screen stays on while this page is open."}
-  catch{n.textContent="The screen could not be kept on. Battery saver mode may be blocking it."}
+  try{wl=await navigator.wakeLock.request("screen");awakeMsg("The screen stays on while this page is open.")}
+  catch{awakeMsg("The screen could not be kept on. Battery saver mode may be blocking it.")}
 }
 function renderLive(){
-  $("peerName").textContent="Connected to "+peerName;$("route").textContent=route+(peerVer&&peerVer!==VERSION?` · The other device runs version ${peerVer}. Reload its page to update.`:"");
-  $("dirnote").textContent=HAS_DIR?"Received files are saved to a folder you choose.":"This browser downloads each received file when its transfer completes.";
+  $("peerName").textContent=tr("Connected to {0}",pn());
+  $("route").textContent=tr(routeKey)+(peerVer&&peerVer!==VERSION?" · "+tr("The other device runs version {0}. Reload its page to update.",peerVer):"");
+  $("dirnote").textContent=tr(HAS_DIR?"Received files are saved to a folder you choose.":"This browser downloads each received file when its transfer completes.");
   $("chg").hidden=!HAS_DIR;$("ziprow").hidden=HAS_DIR||!HAS_OPFS}
 
-// ---------- Transfers ----------
-function addRow(t){
+// ---------- Notifications ----------
+let AC;
+const unlockAudio=()=>{try{AC=AC||new(window.AudioContext||window.webkitAudioContext)();AC.resume()}catch{}};
+function beep(){try{unlockAudio();const o=AC.createOscillator(),g=AC.createGain();o.frequency.value=880;g.gain.value=.15;o.connect(g);g.connect(AC.destination);o.start();o.stop(AC.currentTime+.25)}catch{}}
+function notifyDone(msg){
+  if(!$("notify").checked)return;
+  if($("sound").checked){beep();try{navigator.vibrate&&navigator.vibrate(200)}catch{}}
+  if(document.hidden){
+    document.title="✓ "+msg;
+    try{if("Notification" in window&&Notification.permission==="granted")new Notification("Local Drop",{body:msg,tag:"ld-done",silent:!$("sound").checked})}catch{}
+  }
+}
+const permUi=()=>{$("allown").hidden=!($("notify").checked&&"Notification" in window&&Notification.permission==="default")};
+const askPerm=()=>{try{if("Notification" in window&&Notification.permission==="default")Promise.resolve(Notification.requestPermission()).then(permUi)}catch{}};
+
+// ---------- Messages from the other device ----------
+function addRow(txt){
   const li=document.createElement("li");li.innerHTML="<span></span><progress max='1' value='0' hidden></progress>";
   const s=li.firstChild,p=li.lastChild;$("list").prepend(li);
-  const o={set(v,txt,err){s.textContent=txt;s.className=err?"e":"";p.hidden=v==null||v>=1;if(v!=null)p.value=v}};
-  o.set(null,t);return o}
+  const o={set(v,x,err){s.textContent=x;s.className=err?"e":"";p.hidden=v==null||v>=1;if(v!=null)p.value=v}};
+  o.set(null,txt);return o}
+function showText(x){
+  const li=document.createElement("li"),h=document.createElement("div"),p=document.createElement("div"),r=document.createElement("div");
+  h.className="m";h.textContent=tr("Text received");p.className="tx";p.textContent=x;r.className="row";
+  const b=document.createElement("button");b.textContent=tr("Copy");b.onclick=()=>copy(x,b);r.append(b);
+  if(/^https?:\/\/\S+$/i.test(x.trim())){const o=document.createElement("button");o.textContent=tr("Open link");o.onclick=()=>window.open(x.trim(),"_blank","noopener,noreferrer");r.append(o)}
+  li.append(h,p,r);$("list").prepend(li);notifyDone(tr("Text received"))}
+function sendText(x){
+  x=String(x||"");
+  if(!x.trim()){say(tr("There is no text to send."),true);return false}
+  if(x.length>20000){say(tr("The text is too long. The limit is {0} characters.",20000),true);return false}
+  if(!conn||lost){say(tr("Not connected. Wait for the connection to be restored."),true);return false}
+  try{conn.send(JSON.stringify({t:"text",x}))}catch{say(tr("Not connected. Wait for the connection to be restored."),true);return false}
+  say("");addRow(tr("Text sent ({0} characters).",x.length));return true}
 
 function onData(d){
-  const run=f=>{q=q.then(f).catch(e=>{
-    addRow("").set(null,"Error: "+e.message,true);
-    if(rx){cur&&cur.w&&cur.w.abort().catch(()=>{});(rx.z||cur&&cur.o)&&work({op:"drop"}).catch(()=>{});rx=cur=null;try{conn.send(JSON.stringify({t:"cancel"}))}catch{}}
-  })};
   seen=Date.now();
+  const run=f=>{const e=ep;q=q.then(()=>e===ep?f():0).catch(err=>{
+    if(lost)return;
+    addRow("").set(null,tr("Error: {0}",err.message),true);
+    if(rx){cur&&cur.w&&cur.w.abort().catch(()=>{});(rx.z||(cur&&cur.o))&&work({op:"drop"}).catch(()=>{});rx=cur=null;try{conn.send(JSON.stringify({t:"cancel"}))}catch{}}
+  })};
   if(typeof d!=="string"){run(()=>chunk(d));return}
   let m;try{m=JSON.parse(d)}catch{return}
   if(!m||typeof m!=="object")return;
-  if(m.t==="hello"){peerName=clean(m.n,40)||peerName;peerVer=clean(m.v,20);if(m.s&&role==="join")sid=clean(m.s,64);ackOK=!!m.k;renderLive()}
-  else if(m.t==="ping"||m.t==="auth"){}
-  else if(m.t==="ack"){ackB=m.n;const w=ackWake;ackWake=null;w&&w()}
-  else if(m.t==="cancel"){cxl=true;const w=ackWake;ackWake=null;w&&w()}
-  else if(m.t==="bye"){reset();say("The other device ended the session.")}
-  else if(m.t==="accept"||m.t==="reject"){const w=waiter;waiter=null;w&&w(m)}
-  else run(()=>handle(m));
+  switch(m.t){
+    case"hello":peerName=clean(m.n,40)||peerName;peerVer=clean(m.v,20);if(m.s&&role==="join")sid=clean(m.s,64);ackOK=!!m.k;renderLive();break;
+    case"ping":case"auth":break;
+    case"ack":{ackB=m.n;const w=ackWake;ackWake=null;w&&w();break}
+    case"cancel":{cxl=true;const w=ackWake;ackWake=null;w&&w();break}
+    case"accept":case"reject":{const w=waiter;waiter=null;w&&w(m);break}
+    case"state":{const w=stWait;stWait=null;w&&w(m);break}
+    case"done":if(job&&m.id===job.id){job.done=true;const w=job.doneRes;job.doneRes=null;w&&w()}break;
+    case"bye":reset();say(tr("The other device ended the session."));break;
+    case"text":if(typeof m.x==="string")showText(m.x.slice(0,20000));break;
+    case"sync":run(()=>syncReply(m));break;
+    default:run(()=>handle(m));
+  }
 }
-
-async function pickDir(){try{dir=await showDirectoryPicker({mode:"readwrite"})}catch{}}
-async function freeName(n){
-  const i=n.lastIndexOf("."),b=i>0?n.slice(0,i):n,x=i>0?n.slice(i):"";
-  for(let k=0;;k++){const t=k?`${b} (${k})${x}`:n;try{await dir.getFileHandle(t)}catch{return t}}}
 
 // <zip>
 // Minimal ZIP writer ("stored", no compression). Sizes come after the data, so each entry uses a data descriptor.
@@ -402,47 +559,60 @@ const work=(m,t)=>new Promise((res,rej)=>{
   wk.postMessage(m,t||[])});
 function save(f,name){const a=document.createElement("a");a.href=URL.createObjectURL(f);a.download=safe(name);a.click();setTimeout(()=>URL.revokeObjectURL(a.href),36e5)}
 
+// ---------- Receiving ----------
+async function pickDir(){try{dir=await showDirectoryPicker({mode:"readwrite"})}catch{}}
+async function openLeaf(root,parts){let d=root;for(const s of parts.slice(0,-1))d=await d.getDirectoryHandle(s,{create:true});return d}
+async function freeName(d,n){
+  const i=n.lastIndexOf("."),b=i>0?n.slice(0,i):n,x=i>0?n.slice(i):"";
+  for(let k=0;;k++){const t=k?`${b} (${k})${x}`:n;try{await d.getFileHandle(t)}catch{return t}}}
+
 function decide(m){
   if($("auto").checked&&(dir||!HAS_DIR))return Promise.resolve(true);
   const names=m.files.map(f=>f.name);
   return new Promise(res=>{
-    $("ask").textContent=`${peerName} wants to send ${plural(m.files.length)} (${fmt(m.files.reduce((a,f)=>a+f.size,0))}): ${names.slice(0,4).join(", ")}${names.length>4?", …":""}`;
+    decRes=v=>{decRes=null;$("pA").hidden=true;res(v)};
+    $("ask").textContent=tr("{0} wants to send {1} ({2}): {3}",pn(),plural(m.files.length),fmt(m.files.reduce((a,f)=>a+f.size,0)),names.slice(0,4).join(", ")+(names.length>4?", …":""));
     $("pA").hidden=false;
-    $("yes").onclick=async()=>{if(HAS_DIR&&!dir)await pickDir();$("pA").hidden=true;res(true)};
-    $("no").onclick=()=>{$("pA").hidden=true;res(false)};
+    $("yes").onclick=async()=>{if(HAS_DIR&&!dir)await pickDir();decRes&&decRes(true)};
+    $("no").onclick=()=>decRes&&decRes(false);
   });
 }
 
 const validOffer=m=>Array.isArray(m.files)&&m.files.length>0&&m.files.length<=20000&&m.files.every(f=>f&&typeof f.name==="string"&&Number.isFinite(f.size)&&f.size>=0);
+const bad=()=>new Error(tr("Unexpected data from the other device."));
 
 async function handle(m){
   if(m.t==="offer"){
-    if(!validOffer(m)||rx){conn.send(JSON.stringify({t:"reject"}));return}
-    const files=m.files.map(f=>({name:clean(f.name,255)||"file",size:Math.floor(f.size)}));
+    if(typeof m.id!=="string"||m.id.length>64||!validOffer(m)||rx){conn.send(JSON.stringify({t:"reject"}));return}
+    const files=m.files.map(f=>({name:clean(f.name,500)||"file",size:Math.floor(f.size)}));
     const total=files.reduce((a,f)=>a+f.size,0);
     if(!HAS_DIR&&!HAS_OPFS&&files.some(f=>f.size>MEMLIM)){
       conn.send(JSON.stringify({t:"reject"}));
-      addRow("").set(null,"Declined: this browser cannot receive files larger than "+fmt(MEMLIM)+". Use a desktop browser.",true);return}
+      addRow("").set(null,tr("Declined: this browser cannot receive files larger than {0}. Use a desktop browser.",fmt(MEMLIM)),true);return}
     const ok=await decide({files});
+    if(!conn)return;
     conn.send(JSON.stringify({t:ok?"accept":"reject"}));
     if(!ok)return;
-    rx={n:0,count:files.length,total,files,got:0,acked:0,row:addRow("Receiving "+plural(files.length)+"…")};
-    if(!dir&&HAS_OPFS&&$("zip").checked&&files.length>1&&total<3.9e9){
+    rx={id:m.id,n:0,count:files.length,total,files,got:0,acked:0,row:addRow(tr("Receiving {0}…",plural(files.length)))};
+    const hasPath=files.some(f=>f.name.includes("/"));
+    if(!dir&&HAS_OPFS&&(hasPath||($("zip").checked&&files.length>1))&&total<3.9e9&&files.length<65000){
       try{await work({op:"open"});rx.z={list:[],off:0,names:new Set(),dt:dosTime(new Date())}}catch{}}
-  }else if(m.t==="file"&&rx){
-    if(cur||rx.n>=rx.count)throw new Error("Unexpected data from the other device.");
-    const f=rx.files[rx.n];   // names and sizes come from the offer you accepted, not from this message
-    cur={name:f.name,size:f.size,got:0,crc:0,w:null,o:false,buf:[]};
+  }else if(m.t==="file"&&rx&&m.id===rx.id){
+    if(m.i!==rx.n||!Number.isInteger(m.off))throw bad();
+    if(cur){if(m.off!==cur.got)throw bad();return} // the file in progress continues where it stopped
+    if(m.off!==0)throw bad();
+    const f=rx.files[rx.n],parts=cleanPath(f.name),leaf=parts[parts.length-1];   // names and sizes come from the offer you accepted
+    cur={name:leaf,size:f.size,i:rx.n,got:0,crc:0,w:null,o:false,buf:[]};
     if(rx.z){
-      const base=safe(f.name);let nm=base;
+      const base=parts.join("/");let nm=base;
       for(let i=1;rx.z.names.has(nm);i++)nm=base.replace(/(\.[^.]*)?$/,` (${i})$1`);
       rx.z.names.add(nm);cur.zname=nm;cur.zoff=rx.z.off;
       const h=zLocal(nm,rx.z.dt);rx.z.off+=h.length;await work({op:"write",buf:h.buffer},[h.buffer]);
-    }else if(dir)cur.w=await(await dir.getFileHandle(await freeName(safe(f.name)),{create:true})).createWritable();
+    }else if(dir){const d=await openLeaf(dir,parts);cur.w=await(await d.getFileHandle(await freeName(d,leaf),{create:true})).createWritable()}
     else if(HAS_OPFS){try{await work({op:"open"});cur.o=true}catch{}}
-    if(!rx.z&&!cur.w&&!cur.o&&f.size>MEMLIM)throw new Error("This browser cannot store a file this large.");
-  }else if(m.t==="end"&&cur){
-    if(cur.got!==cur.size)throw new Error("The received size of "+cur.name+" did not match the offer.");
+    if(!rx.z&&!cur.w&&!cur.o&&f.size>MEMLIM)throw new Error(tr("This browser cannot store a file this large."));
+  }else if(m.t==="end"&&cur&&rx&&m.id===rx.id){
+    if(cur.got!==cur.size)throw new Error(tr("The received size of {0} did not match the offer.",cur.name));
     if(rx.z){const d=zDesc(cur.crc,cur.size);rx.z.off+=d.length;rx.z.list.push({name:cur.zname,crc:cur.crc,size:cur.size,off:cur.zoff});await work({op:"write",buf:d.buffer},[d.buffer])}
     else if(cur.w)await cur.w.close();
     else save(cur.o?(await work({op:"close"})).file:new Blob(cur.buf),cur.name);
@@ -450,68 +620,116 @@ async function handle(m){
     if(rx.n===rx.count){
       if(rx.z){const e=zEnd(rx.z.list,rx.z.dt,rx.z.off);await work({op:"write",buf:e.buffer},[e.buffer]);
         save((await work({op:"close"})).file,"LocalDrop-"+new Date().toISOString().slice(0,19).replace(/[-:T]/g,"")+".zip")}
-      rx.row.set(1,`Received ${plural(rx.count)} (${fmt(rx.total)})`+(rx.z?" as one ZIP file.":dir?" and saved to your folder.":"."));
-      rx=null;
+      rx.row.set(1,tr(rx.z?"Received {0} ({1}) as one ZIP file.":dir?"Received {0} ({1}) and saved to your folder.":"Received {0} ({1}).",plural(rx.count),fmt(rx.total)));
+      doneId=rx.id;try{conn.send(JSON.stringify({t:"done",id:rx.id}))}catch{}rx=null;notifyDone(tr("Transfer complete"));
     }
   }
 }
 async function chunk(d){
-  if(!cur)return;
+  if(!cur||!rx)return;
   const n=d.byteLength;
-  if(cur.got+n>cur.size)throw new Error("The other device sent more data than expected.");
+  if(cur.got+n>cur.size)throw new Error(tr("The other device sent more data than expected."));
   if(rx.z){cur.crc=crc32(cur.crc,new Uint8Array(d));rx.z.off+=n;await work({op:"write",buf:d},[d])}
   else if(cur.w)await cur.w.write(d);else if(cur.o)await work({op:"write",buf:d},[d]);else cur.buf.push(d);
   cur.got+=n;rx.got+=n;
   // Tell the sender how much has been written so it never runs far ahead of this device.
   if(rx.got-rx.acked>=ACK){rx.acked=rx.got;try{conn.send(JSON.stringify({t:"ack",n:rx.got}))}catch{}}
-  rx.row.set(rx.got/(rx.total||1),`Receiving ${cur.name} (${rx.n+1} of ${rx.count}): ${Math.round(rx.got/(rx.total||1)*100)}%`);
+  rx.row.set(rx.got/(rx.total||1),tr("Receiving {0} ({1} of {2}): {3}%",cur.name,rx.n+1,rx.count,Math.round(rx.got/(rx.total||1)*100)));
+}
+// After a reconnect the sender asks where we stopped, so it can continue from there.
+function syncReply(m){
+  const ok=rx&&rx.id===m.id;
+  if(ok)rx.acked=rx.got;
+  conn.send(JSON.stringify(ok?{t:"state",id:m.id,n:rx.n,got:cur?cur.got:0,tot:rx.got}:{t:"state",id:m.id,none:1,done:doneId===m.id}));
 }
 
-async function sendFiles(fs){
-  if(!fs.length||busy)return;
-  if(!conn){say("Not connected. Wait for the connection to be restored.",true);return}
-  busy=true;
-  const dc=conn.dataChannel;dc.bufferedAmountLowThreshold=BIG;
-  const lostErr=()=>new Error("The connection was lost.");
-  const flow=async()=>{
-    for(;;){
-      if(cxl)throw new Error("The receiving device stopped the transfer.");
-      if(dc.readyState!=="open")throw lostErr();
-      if(dc.bufferedAmount>4*BIG)await new Promise(r=>{dc.onbufferedamountlow=r;dc.addEventListener("close",r,{once:true})});
-      else if(ackOK&&sentB-ackB>WIN)await new Promise(r=>{ackWake=r;dc.addEventListener("close",r,{once:true})});
-      else return}};
-  const total=fs.reduce((a,f)=>a+f.size,0)||1;
-  const row=tx=addRow(`Waiting for ${peerName} to accept ${plural(fs.length)}…`);
-  try{
-    conn.send(JSON.stringify({t:"offer",files:fs.map(f=>({name:f.name,size:f.size}))}));
-    const a=await new Promise(r=>waiter=r);
-    if(a.t!=="accept"){row.set(null,peerName+" declined the transfer.",true);return}
-    let sent=0;sentB=ackB=0;cxl=false;const t0=performance.now();
-    for(const [i,f] of fs.entries()){
-      conn.send(JSON.stringify({t:"file",name:f.name,size:f.size}));
-      for(let o=0;o<f.size;o+=BIG){
-        const b=await f.slice(o,o+BIG).arrayBuffer();
-        for(let k=0;k<b.byteLength;k+=CHUNK){await flow();const n=Math.min(CHUNK,b.byteLength-k);conn.send(new Uint8Array(b,k,n));sentB+=n}
-        sent+=b.byteLength;
-        row.set(sent/total,`Sending ${f.name} (${i+1} of ${fs.length}): ${Math.round(sent/total*100)}%, ${fmt(sent/((performance.now()-t0)/1000||1))}/s`);
+// ---------- Sending ----------
+const items=l=>l.map(x=>x.f?x:{f:x,p:x.webkitRelativePath||x.name});
+const lostErr=()=>Object.assign(new Error(tr("The connection was lost.")),{lost:true});
+function waitReconnect(g){
+  return new Promise((res,rej)=>{
+    if(cg!==g&&!lost&&conn){res();return}
+    reconWait={res:()=>{reconWait=null;res()},rej:e=>{reconWait=null;rej(e)}}})}
+async function resync(j){
+  const st=await new Promise((res,rej)=>{
+    const to=setTimeout(()=>{stWait=null;rej(new Error(tr("The other device did not respond. Send the files again.")))},10000);
+    stWait=m=>{clearTimeout(to);res(m)};
+    try{conn.send(JSON.stringify({t:"sync",id:j.id}))}catch{clearTimeout(to);rej(lostErr())}});
+  if(st.none){
+    if(st.done){j.i=j.fs.length;j.o=0;j.done=true;return}
+    throw new Error(tr("The other device no longer has this transfer. Send the files again."))}
+  j.i=st.n;j.o=st.got;sentB=ackB=st.tot;j.base=st.tot;j.t0=performance.now();cxl=false}
+
+async function pump(j){
+  let wait=false,g=cg; // g: the connection generation this attempt started on
+  for(;;){
+    try{
+      if(wait){await waitReconnect(g);await resync(j);wait=false;g=cg}
+      const c=conn;if(!c||lost)throw lostErr();
+      const dc=c.dataChannel;dc.bufferedAmountLowThreshold=BIG;
+      const snd=x=>{try{c.send(x)}catch{throw lostErr()}};
+      const flow=async()=>{for(;;){
+        if(cxl)throw new Error(tr("The receiving device stopped the transfer."));
+        if(dc.readyState!=="open")throw lostErr();
+        if(dc.bufferedAmount>4*BIG)await new Promise(r=>{dc.onbufferedamountlow=r;dc.addEventListener("close",r,{once:true})});
+        else if(ackOK&&sentB-ackB>WIN)await new Promise(r=>{ackWake=r;dc.addEventListener("close",r,{once:true})});
+        else return}};
+      for(;j.i<j.fs.length;j.i++,j.o=0){
+        const x=j.fs[j.i];
+        snd(JSON.stringify({t:"file",id:j.id,i:j.i,off:j.o}));
+        while(j.o<x.size){
+          const b=await x.f.slice(j.o,Math.min(j.o+BIG,x.size)).arrayBuffer();
+          for(let k=0;k<b.byteLength;k+=CHUNK){await flow();const n=Math.min(CHUNK,b.byteLength-k);snd(new Uint8Array(b,k,n));sentB+=n;j.o+=n}
+          j.row.set(sentB/j.total,tr("Sending {0} ({1} of {2}): {3}%, {4}/s",x.p.split("/").pop(),j.i+1,j.fs.length,Math.round(sentB/j.total*100),fmt((sentB-j.base)/((performance.now()-j.t0)/1000||1))));
+        }
+        snd(JSON.stringify({t:"end",id:j.id}));
       }
-      conn.send(JSON.stringify({t:"end"}));
-    }
-    while(dc.bufferedAmount>0)await new Promise(r=>setTimeout(r,100));
-    if(dc.readyState!=="open")throw lostErr();
-    row.set(1,`Sent ${plural(fs.length)} (${fmt(total)}).`);
-  }catch(e){row.set(null,"Transfer failed: "+e.message,true)}
-  finally{busy=false;tx=null}
+      while(dc.bufferedAmount>0&&dc.readyState==="open")await new Promise(r=>setTimeout(r,100));
+      if(!j.done)await new Promise(r=>{j.doneRes=r;dc.addEventListener("close",r,{once:true})}); // wait for the receiver to confirm
+      if(!j.done)throw lostErr();
+      return;
+    }catch(e){if(!e.lost)throw e;wait=true}
+  }
+}
+
+async function sendFiles(list){
+  if(!list.length||busy)return;
+  if(!conn||lost){say(tr("Not connected. Wait for the connection to be restored."),true);return}
+  const fs=items(list).map(x=>({f:x.f,p:x.p,size:x.f.size}));
+  const offer={t:"offer",id:hex(crypto.getRandomValues(new Uint8Array(8))),files:fs.map(x=>({name:x.p,size:x.size}))},js=JSON.stringify(offer);
+  if(js.length>2e5){say(tr("Too many files for one transfer. Send them in smaller batches."),true);return}
+  say("");busy=true;
+  const total=fs.reduce((a,x)=>a+x.size,0)||1;
+  const row=addRow(tr("Waiting for {0} to accept {1}…",pn(),plural(fs.length)));
+  job={id:offer.id,fs,total,i:0,o:0,row,t0:performance.now(),base:0};
+  try{
+    conn.send(js);
+    const a=await new Promise(r=>waiter=r);
+    if(a.lost){row.set(null,tr("The connection was lost."),true);return}
+    if(a.t!=="accept"){row.set(null,tr("{0} declined the transfer.",pn()),true);return}
+    sentB=ackB=0;cxl=false;job.t0=performance.now();
+    await pump(job);
+    row.set(1,tr("Sent {0} ({1}).",plural(fs.length),fmt(total)));notifyDone(tr("Transfer complete"));
+  }catch(e){row.set(null,tr("Transfer failed: {0}",e.message),true)}
+  finally{busy=false;job=null}
+}
+
+// Folders: drag and drop and the folder picker both keep the relative path of every file.
+async function readEntry(e,path,out){
+  if(e.isFile){out.push({f:await new Promise((res,rej)=>e.file(res,rej)),p:path+e.name})}
+  else if(e.isDirectory){
+    const r=e.createReader();
+    for(;;){const b=await new Promise((res,rej)=>r.readEntries(res,rej));if(!b.length)break;for(const c of b)await readEntry(c,path+e.name+"/",out)}}
 }
 
 // ---------- Interface ----------
-const copy=async(t,b)=>{try{await navigator.clipboard.writeText(t);const o=b.textContent;b.textContent="Copied";setTimeout(()=>b.textContent=o,1500)}catch{}};
+const copy=async(x,b)=>{try{await navigator.clipboard.writeText(x);const o=b.textContent;b.textContent=tr("Copied");setTimeout(()=>b.textContent=o,1500)}catch{}};
 $("bH").onclick=()=>host();
 $("nc").onclick=()=>host();
 $("own").onclick=()=>{$("ownrow").hidden=!$("ownrow").hidden;$("ownin").focus()};
 $("ownok").onclick=()=>{
   const v=$("ownin").value.trim();
-  if(v.length<10||/^(.)\1+$/.test(v)){$("ownmsg").textContent="Use at least 10 characters. A longer phrase is safer.";$("ownmsg").className="m e";return}
+  if(v.length<10||/^(.)\1+$/.test(v)){$("ownmsg").textContent=tr("Use at least 10 characters. A longer phrase is safer.");$("ownmsg").className="m e";return}
   host(v)};
 $("bJ").onclick=()=>{reset();view("vJoin");$("inp").focus()};
 $("go").onclick=join;
@@ -520,28 +738,49 @@ $("jx").onclick=()=>{reset();say("")};
 $("cx").onclick=()=>{reset();say("")};
 $("bye").onclick=()=>{try{conn&&conn.send(JSON.stringify({t:"bye"}))}catch{}setTimeout(()=>{reset();say("")},150)};
 $("cc").onclick=()=>copy($("phrase").textContent,$("cc"));
-if(navigator.share)$("cl").textContent="Share link";
 $("cl").onclick=()=>navigator.share?navigator.share({title:"Local Drop",url:hostLink}).catch(()=>{}):copy(hostLink,$("cl"));
 $("pick").onclick=()=>$("fi").click();
+$("pickd").onclick=()=>$("fo").click();
 $("fi").onchange=e=>{sendFiles([...e.target.files]);e.target.value=""};
+$("fo").onchange=e=>{sendFiles([...e.target.files]);e.target.value=""};
 $("chg").onclick=pickDir;
-try{$("awake").checked=localStorage.getItem("ld.awake")!=="0"}catch{}
-$("awake").onchange=()=>{try{localStorage.setItem("ld.awake",$("awake").checked?"1":"0")}catch{}holdAwake()};
+$("sendtxt").onclick=()=>{if(sendText($("txt").value))$("txt").value=""};
+$("pasteb").onclick=async()=>{try{sendText(await navigator.clipboard.readText())}catch{say(tr("The clipboard could not be read. Allow clipboard access, or paste the text into the box."),true)}};
 const dz=$("drop");
 dz.ondragover=e=>{e.preventDefault();dz.classList.add("o")};
 dz.ondragleave=()=>dz.classList.remove("o");
-dz.ondrop=e=>{e.preventDefault();dz.classList.remove("o");sendFiles([...e.dataTransfer.files])};
-
-// Returning to the page (for example on a phone) retries a lost connection immediately.
+dz.ondrop=e=>{
+  e.preventDefault();dz.classList.remove("o");
+  const es=[...(e.dataTransfer.items||[])].map(i=>i.webkitGetAsEntry&&i.webkitGetAsEntry()).filter(Boolean),fl=[...e.dataTransfer.files];
+  (async()=>{const out=[];if(es.length)for(const x of es)await readEntry(x,"",out);else out.push(...items(fl));sendFiles(out)})().catch(()=>{});
+};
+for(const k of ["awake","notify","sound"]){
+  try{$(k).checked=localStorage.getItem("ld."+k)!=="0"}catch{}
+  $(k).onchange=()=>{try{localStorage.setItem("ld."+k,$(k).checked?"1":"0")}catch{}
+    if(k==="awake")holdAwake();if(k==="notify"&&$(k).checked)askPerm();permUi()}}
+$("allown").onclick=askPerm;
+$("lang").onchange=()=>setLang($("lang").value,true);
+document.addEventListener("pointerdown",unlockAudio,{once:true});
 document.addEventListener("visibilitychange",()=>{
   if(document.hidden)return;
+  document.title="Local Drop";
   if(up||role)holdAwake();
   if(lost)kick();
 });
 
+// ---------- Install as an app (optional) ----------
+let ip;
+addEventListener("beforeinstallprompt",e=>{e.preventDefault();ip=e;$("inst").hidden=false});
+addEventListener("appinstalled",()=>{ip=null;$("inst").hidden=true});
+$("inst").onclick=async()=>{if(!ip)return;ip.prompt();try{await ip.userChoice}catch{}ip=null;$("inst").hidden=true};
+const standalone=matchMedia("(display-mode: standalone)").matches||navigator.standalone;
+if(/iPhone|iPad/.test(navigator.userAgent)&&!standalone)$("ioshint").hidden=false;
+if("serviceWorker" in navigator&&location.protocol==="https:")navigator.serviceWorker.register("sw.js").catch(()=>{});
+
+// ---------- Start ----------
 if(HAS_OPFS)(async()=>{try{const r=await navigator.storage.getDirectory();for await(const [n] of r.entries())if(n.startsWith("ld-"))await r.removeEntry(n)}catch{}})();
-$("ver").textContent=`Version ${VERSION} · Updated ${BUILT}`;
-setMode(mode);view("vHome");
+$("cl").dataset.k=navigator.share?"Share link":"Copy link";
+setLang(detectLang(),false);permUi();view("vHome");
 // Opening a session link (or scanning its QR code) joins automatically.
 const hp=new URLSearchParams(location.hash.slice(1));
 if(hp.get("j")){
