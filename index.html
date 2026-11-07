@@ -65,7 +65,15 @@ progress{display:block;width:100%;height:8px;margin-top:8px}
   <div class="row">
     <button id="cc">Copy code</button>
     <button id="cl">Copy link</button>
+    <button id="nc">New code</button>
+    <button id="own">Use my own phrase</button>
     <button id="cx">Cancel</button>
+  </div>
+  <div id="ownrow" hidden>
+    <label for="ownin" class="m">Your own phrase (at least 10 characters, case-sensitive)</label>
+    <input type="text" id="ownin" autocapitalize="none" autocomplete="off" spellcheck="false">
+    <div class="row"><button class="p" id="ownok">Use this phrase</button></div>
+    <p class="m" id="ownmsg"></p>
   </div>
 </section>
 
@@ -93,25 +101,29 @@ progress{display:block;width:100%;height:8px;margin-top:8px}
   <div class="card">
     <div id="drop">Drag files here or <button class="link" id="pick">select files</button> to send<input type="file" id="fi" multiple hidden></div>
     <label class="m" style="display:block"><input type="checkbox" id="auto"> Accept incoming files automatically</label>
+    <label class="m" style="display:block" id="ziprow"><input type="checkbox" id="zip" checked> Receive several files as one ZIP, so the browser asks only once</label>
     <label class="m" style="display:block"><input type="checkbox" id="awake" checked> Keep this device awake while connected</label>
     <div class="m" id="awakenote" style="margin-top:0"></div>
     <div class="m"><span id="dirnote"></span> <button class="link" id="chg" hidden>Change save folder</button></div>
   </div>
   <ul id="list"></ul>
 </section>
+<footer class="m" id="ver" style="text-align:center;margin:24px 0 0"></footer>
 </main>
 
 <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
 <script>
 const $=id=>document.getElementById(id);
+const VERSION="1.4.0",BUILT='2026-11-07 11:05';
 const WORDS=("acorn amber anchor apple arrow aspen atlas badge baker banjo basil beach berry birch blaze bloom brave bread brick brook cabin cactus camel candy canoe cedar chalk charm cherry chess cliff cloud clover cobra comet coral cotton crane creek crown daisy delta denim dune eagle ember fable fairy falcon fern ferry field finch flame flint forest frost galaxy garden ginger glacier grape gravel harbor hazel heron honey igloo iris island ivory jade jelly jungle kayak kite lagoon lantern lemon lilac lotus lunar maple marble meadow melon mint mocha moss nectar noble oasis olive onyx orbit otter panda pearl pepper pine plum pond poppy quartz quill raven reef ridge river robin saffron sage shell silver spruce stone sunny tulip velvet violet walnut willow winter yellow zebra zephyr pebble thunder").split(" ");
 const STUN=[{urls:"stun:stun.l.google.com:19302"},{urls:"stun:stun.cloudflare.com:3478"}];
 const NOTES={
   lan:"Both devices must be on the same Wi-Fi or local network. Files stay on that network; only the initial handshake uses the internet.",
   any:"Files travel directly between the devices over the internet, never through a server. Some networks, such as mobile data, may block direct connections."};
-const CHUNK=65536, BIG=1<<20, TTL=6e5, VIEWS=["vHome","vHost","vJoin","vLive"], HAS_DIR=!!window.showDirectoryPicker;
-let mode="lan",peer,conn,timer,waiter,lock,dir,cur,rx,busy,wl,hostLink,route="",peerName="Other device",role,tid,sid,lost,up,retry,hb,seen=0,tx,trying,q=Promise.resolve();
+const CHUNK=65536, BIG=1<<20, TTL=6e5, VIEWS=["vHome","vHost","vJoin","vLive"], HAS_DIR=!!window.showDirectoryPicker,
+  ACK=4*BIG, WIN=16*BIG, MEMLIM=400*BIG, HAS_OPFS=!!(window.Worker&&navigator.storage&&navigator.storage.getDirectory);
+let mode="lan",peer,conn,timer,waiter,lock,dir,cur,rx,busy,wl,hostLink,route="",peerName="Other device",role,tid,sid,lost,up,retry,hb,seen=0,tx,trying,sentB=0,ackB=0,ackWake,ackOK,cxl,wk,authKey,peerVer,q=Promise.resolve();
 try{mode=localStorage.getItem("ld.mode")==="any"?"any":"lan"}catch{}
 
 // Replacing `config` removes PeerJS's built-in TURN relay, so files can never be relayed.
@@ -119,8 +131,10 @@ const cfg=()=>({iceServers:mode==="lan"?[]:STUN});
 const view=v=>VIEWS.forEach(i=>$(i).hidden=i!==v);
 const say=(t,err)=>{const s=$("msg");s.textContent=t||"";s.className="m"+(err?" e":"");s.hidden=!t};
 const fmt=n=>n<1e6?(n/1e3).toFixed(0)+" KB":n<1e9?(n/1e6).toFixed(1)+" MB":(n/1e9).toFixed(2)+" GB";
-const safe=n=>n.replace(/[\\/:*?"<>|]/g,"_");
+const clean=(t,n)=>String(t==null?"":t).replace(/[\u0000-\u001f\u007f]/g,"").slice(0,n);
+const safe=n=>{n=clean(n,200).replace(/[\\/:*?"<>|]/g,"_").replace(/^[. ]+|[. ]+$/g,"");return /^(con|prn|aux|nul|com\d|lpt\d)(\..*)?$/i.test(n)?"_"+n:n||"file"};
 const norm=p=>p.trim().toLowerCase().replace(/[\s_.,]+/g,"-").replace(/[^a-z0-9-]/g,"").replace(/-+/g,"-");
+const GEN=/^([a-z]+-){4}\d{2}$/,canon=p=>{const n=norm(p);return GEN.test(n)?n:p.trim()};
 const plural=n=>n+" file"+(n===1?"":"s");
 const devName=()=>{const u=navigator.userAgent;return /iPhone/.test(u)?"iPhone":/iPad/.test(u)?"iPad":/Android/.test(u)?"Android device":/Windows/.test(u)?"Windows PC":/Mac/.test(u)?"Mac":/Linux/.test(u)?"Linux PC":"Other device"};
 
@@ -132,50 +146,91 @@ $("modes").onclick=e=>{if(e.target.dataset.m)setMode(e.target.dataset.m)};
 function reset(){
   clearTimeout(timer);clearInterval(retry);clearInterval(hb);try{conn&&conn.close()}catch{}try{peer&&peer.destroy()}catch{}
   try{wl&&wl.release()}catch{}
-  conn=peer=waiter=cur=rx=tx=wl=dir=role=tid=sid=null;lock=busy=lost=up=trying=false;q=Promise.resolve();
-  $("list").innerHTML="";$("pA").hidden=true;$("banner").hidden=true;view("vHome")}
+  conn=peer=waiter=cur=rx=tx=wl=dir=role=tid=sid=authKey=null;lock=busy=lost=up=trying=ackOK=false;q=Promise.resolve();
+  $("list").innerHTML="";$("pA").hidden=true;$("banner").hidden=true;$("auto").checked=false;view("vHome")}
 const fail=m=>{reset();say(m,true)};
 
+// <auth>
+// The phrase is stretched with PBKDF2 into two independent values: a public session ID used to
+// find each other, and a secret key used to prove that both devices know the phrase.
+const hex=b=>[...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,"0")).join("");
 async function pid(p){
-  const h=await crypto.subtle.digest("SHA-256",new TextEncoder().encode("localdrop:"+norm(p)));
-  return "ld"+[...new Uint8Array(h)].slice(0,16).map(b=>b.toString(16).padStart(2,"0")).join("")}
+  const te=new TextEncoder(),base=await crypto.subtle.importKey("raw",te.encode(p),"PBKDF2",false,["deriveBits"]);
+  const bits=hex(await crypto.subtle.deriveBits({name:"PBKDF2",hash:"SHA-256",salt:te.encode("localdrop-v2"),iterations:200000},base,256));
+  const h=t=>crypto.subtle.digest("SHA-256",te.encode(t+bits));
+  authKey=await crypto.subtle.importKey("raw",await h("auth"),{name:"HMAC",hash:"SHA-256"},false,["sign"]);
+  return "ld"+hex(await h("id")).slice(0,32)}
+const mac=async(label,pair)=>hex(await crypto.subtle.sign("HMAC",authKey,new TextEncoder().encode(label+"|"+pair)));
+// Each side proves it knows the phrase, and the proof covers both encryption fingerprints of this
+// connection. A tampering signaling server cannot sit in the middle without being detected.
+async function handshake(c){
+  const fp=s=>((/a=fingerprint:\S+ (\S+)/.exec(s||"")||[])[1]||"").toUpperCase();
+  const pc=c.peerConnection,l=fp(pc.localDescription&&pc.localDescription.sdp),r=fp(pc.remoteDescription&&pc.remoteDescription.sdp);
+  if(!l||!r||!authKey)return false;
+  const got=new Promise(res=>{
+    const to=setTimeout(()=>res(null),10000);
+    c.on("data",d=>{if(typeof d!=="string")return;try{const m=JSON.parse(d);if(m&&m.t==="auth"){clearTimeout(to);res(m.h)}}catch{}})});
+  const pair=[l,r].sort().join("|"),other=role==="host"?"join":"host";
+  const theirs=await mac(other,pair);
+  c.send(JSON.stringify({t:"auth",h:await mac(role,pair)}));
+  return(await got)===theirs;
+}
+// </auth>
 function gen(){const r=new Uint32Array(5);crypto.getRandomValues(r);
   return [0,1,2,3].map(i=>WORDS[r[i]%WORDS.length]).join("-")+"-"+(10+r[4]%90)}
 
 // Confirms the connection that was actually selected. In local mode, anything else is refused.
-const priv=a=>!a||/\.local$/i.test(a)||/^(10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|169\.254\.|f[cd]|fe80)/i.test(a);
+const priv=a=>!a||/\.local$/i.test(a)||/^(10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|169\.254\.|100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])\.|f[cd]|fe80)/i.test(a);
+// Two devices on the same IPv6 network share the first 64 bits of their addresses.
+const v6=a=>{if(!a||!a.includes(":"))return null;const [h,t]=a.split("%")[0].split("::"),H=h?h.split(":"):[],T=t?t.split(":"):[];while(a.includes("::")&&H.length+T.length<8)T.unshift("0");return H.concat(T).slice(0,4).map(x=>x.padStart(4,"0")).join("")};
+const addr=x=>x.address||x.ip;
+const onLink=(l,r)=>{const a=addr(l),b=addr(r);return(priv(a)&&priv(b))||(!!v6(a)&&v6(a)===v6(b))};
+const desc=x=>x.candidateType+" "+(addr(x)||"hidden");
+async function pairOf(c){
+  for(let i=0;i<8;i++){
+    try{
+      const st=await c.peerConnection.getStats();let pair;
+      st.forEach(r=>{if(r.type==="transport"&&r.selectedCandidatePairId)pair=st.get(r.selectedCandidatePairId)});
+      if(!pair)st.forEach(r=>{if(r.type==="candidate-pair"&&r.state==="succeeded"&&(r.nominated||r.selected))pair=r});
+      const l=pair&&st.get(pair.localCandidateId),r=pair&&st.get(pair.remoteCandidateId);
+      if(l&&r)return[l,r];
+    }catch{}
+    await new Promise(r=>setTimeout(r,250));
+  }
+  return null;
+}
 async function check(c){
-  try{
-    const st=await c.peerConnection.getStats();let pair;
-    st.forEach(r=>{if(r.type==="transport"&&r.selectedCandidatePairId)pair=st.get(r.selectedCandidatePairId)});
-    if(!pair)st.forEach(r=>{if(r.type==="candidate-pair"&&r.state==="succeeded"&&(r.nominated||r.selected))pair=r});
-    const l=st.get(pair.localCandidateId),r=st.get(pair.remoteCandidateId);
-    const local=l.candidateType==="host"&&r.candidateType==="host"&&priv(l.address||l.ip)&&priv(r.address||r.ip);
-    if(mode==="lan"&&!local)throw 0;
-    route=local?"Local network":"Internet, direct connection";return true;
-  }catch{
+  const p=await pairOf(c);
+  if(!p){
     if(mode==="any"){route="Direct connection";return true}
-    fail("The connection could not be verified as local and was closed. Connect both devices to the same Wi-Fi network, or select Internet.");
-    return false}
+    fail("The connection type could not be determined. Please try again.");return false}
+  const [l,r]=p,t=x=>x.candidateType==="host"||x.candidateType==="prflx";
+  const local=t(l)&&t(r)&&onLink(l,r);
+  if(mode==="lan"&&!local){
+    fail(`This connection is not on your local network (${desc(l)} to ${desc(r)}). Connect both devices to the same Wi-Fi network, or select Internet.`);return false}
+  route=local?"Local network":"Internet, direct connection";return true;
 }
 
 // ---------- Session setup ----------
-async function host(){
+async function host(custom){
   reset();view("vHost");say("");holdAwake();
-  const phrase=gen();$("phrase").textContent=phrase;
-  hostLink=location.origin+location.pathname+"#j="+phrase+"&m="+mode;
-  const qr=qrcode(0,"M");qr.addData(hostLink);qr.make();$("qr").src=qr.createDataURL(5,4);
+  $("ownrow").hidden=true;$("ownin").value="";$("ownmsg").textContent="";
+  const phrase=canon(custom||gen());$("phrase").textContent=phrase;
+  hostLink=location.origin+location.pathname+"#j="+encodeURIComponent(phrase)+"&m="+mode;
+  try{const qr=qrcode(0,"M");qr.addData(hostLink);qr.make();$("qr").src=qr.createDataURL(5,4);$("qr").hidden=false}catch{$("qr").hidden=true}
   role="host";sid=[...crypto.getRandomValues(new Uint8Array(16))].map(b=>b.toString(16).padStart(2,"0")).join("");
   const p=peer=new Peer(await pid(phrase),{config:cfg()});
   p.on("error",e=>{if(!lock)fail("The connection service is unavailable ("+e.type+"). Please try again.")});
   p.on("disconnected",()=>setTimeout(()=>{try{if(peer===p&&!p.destroyed)p.reconnect()}catch{}},2000));
   p.on("connection",c=>{
-    if(lost){ // only the original joiner, proving it holds the session key, may resume
-      let ok=false;
+    if(lost){ // only the original joiner may resume: it must prove it knows the phrase, then present the session key
+      let ok=false,authed=false;
+      c.on("open",async()=>{if(await handshake(c))authed=true;else c.close()});
       c.on("data",d=>{
         if(ok)return onData(d);
         let m;try{m=JSON.parse(d)}catch{}
-        if(lost&&m&&m.t==="resume"&&m.s===sid){ok=true;c.send(JSON.stringify({t:"resumed"}));c.on("close",()=>gone(c));resumed(c)}
+        if(m&&m.t==="auth")return;
+        if(authed&&lost&&m&&m.t==="resume"&&m.s===sid){ok=true;c.send(JSON.stringify({t:"resumed"}));c.on("close",()=>gone(c));resumed(c)}
         else c.close();
       });
       return}
@@ -187,7 +242,7 @@ async function host(){
 }
 
 async function join(){
-  const phrase=norm($("inp").value);if(!phrase)return;
+  const phrase=canon($("inp").value);if(!phrase)return;
   reset();view("vJoin");say("Connecting…");role="join";tid=await pid(phrase);holdAwake();
   peer=new Peer({config:cfg()});
   peer.on("error",e=>{clearTimeout(timer);view("vJoin");
@@ -213,8 +268,8 @@ function lose(){
   if(lost)return;lost=true;
   const old=conn;conn=null;waiter=null;busy=false;
   const msg="Transfer interrupted. Send the files again once reconnected.";
-  if(cur){cur.w&&cur.w.abort().catch(()=>{});cur=null}
-  if(rx){rx.row.set(null,msg,true);rx=null}
+  if(cur){cur.w&&cur.w.abort().catch(()=>{});cur.o&&work({op:"drop"}).catch(()=>{});cur=null}
+  if(rx){rx.z&&work({op:"drop"}).catch(()=>{});rx.row.set(null,msg,true);rx=null}
   if(tx){tx.set(null,msg,true);tx=null}
   q=Promise.resolve();$("pA").hidden=true;clearInterval(hb);
   try{old&&old.close()}catch{}
@@ -242,7 +297,7 @@ function attempt(){
       let m;try{m=JSON.parse(d)}catch{}
       if(m&&m.t==="resumed"){ok=true;clearTimeout(to);end();c.on("close",()=>gone(c));resumed(c)}
     });
-    c.on("open",()=>c.send(JSON.stringify({t:"resume",s:sid})));
+    c.on("open",async()=>{if(await handshake(c))c.send(JSON.stringify({t:"resume",s:sid}));else c.close()});
     c.on("close",end);
   });
 }
@@ -263,8 +318,10 @@ function beat(){
 }
 
 async function established(c){
+  const hs=handshake(c);
   if(!await check(c))return;
-  c.send(JSON.stringify({t:"hello",n:devName(),s:role==="host"?sid:undefined}));
+  if(!await hs){fail("The other device could not be verified. The session code may be wrong, or the connection was intercepted. Start a new session.");return}
+  c.send(JSON.stringify({t:"hello",n:devName(),s:role==="host"?sid:undefined,k:1,v:VERSION}));
   up=true;beat();say("");renderLive();view("vLive");
   holdAwake();
 }
@@ -279,9 +336,9 @@ async function holdAwake(){
   catch{n.textContent="The screen could not be kept on. Battery saver mode may be blocking it."}
 }
 function renderLive(){
-  $("peerName").textContent="Connected to "+peerName;$("route").textContent=route;
+  $("peerName").textContent="Connected to "+peerName;$("route").textContent=route+(peerVer&&peerVer!==VERSION?` · The other device runs version ${peerVer}. Reload its page to update.`:"");
   $("dirnote").textContent=HAS_DIR?"Received files are saved to a folder you choose.":"This browser downloads each received file when its transfer completes.";
-  $("chg").hidden=!HAS_DIR}
+  $("chg").hidden=!HAS_DIR;$("ziprow").hidden=HAS_DIR||!HAS_OPFS}
 
 // ---------- Transfers ----------
 function addRow(t){
@@ -291,12 +348,18 @@ function addRow(t){
   o.set(null,t);return o}
 
 function onData(d){
-  const run=f=>{q=q.then(f).catch(e=>addRow("").set(null,"Error: "+e.message,true))};
+  const run=f=>{q=q.then(f).catch(e=>{
+    addRow("").set(null,"Error: "+e.message,true);
+    if(rx){cur&&cur.w&&cur.w.abort().catch(()=>{});(rx.z||cur&&cur.o)&&work({op:"drop"}).catch(()=>{});rx=cur=null;try{conn.send(JSON.stringify({t:"cancel"}))}catch{}}
+  })};
   seen=Date.now();
   if(typeof d!=="string"){run(()=>chunk(d));return}
-  const m=JSON.parse(d);
-  if(m.t==="hello"){peerName=m.n||peerName;if(m.s)sid=m.s;renderLive()}
-  else if(m.t==="ping"){}
+  let m;try{m=JSON.parse(d)}catch{return}
+  if(!m||typeof m!=="object")return;
+  if(m.t==="hello"){peerName=clean(m.n,40)||peerName;peerVer=clean(m.v,20);if(m.s&&role==="join")sid=clean(m.s,64);ackOK=!!m.k;renderLive()}
+  else if(m.t==="ping"||m.t==="auth"){}
+  else if(m.t==="ack"){ackB=m.n;const w=ackWake;ackWake=null;w&&w()}
+  else if(m.t==="cancel"){cxl=true;const w=ackWake;ackWake=null;w&&w()}
   else if(m.t==="bye"){reset();say("The other device ended the session.")}
   else if(m.t==="accept"||m.t==="reject"){const w=waiter;waiter=null;w&&w(m)}
   else run(()=>handle(m));
@@ -306,6 +369,38 @@ async function pickDir(){try{dir=await showDirectoryPicker({mode:"readwrite"})}c
 async function freeName(n){
   const i=n.lastIndexOf("."),b=i>0?n.slice(0,i):n,x=i>0?n.slice(i):"";
   for(let k=0;;k++){const t=k?`${b} (${k})${x}`:n;try{await dir.getFileHandle(t)}catch{return t}}}
+
+// <zip>
+// Minimal ZIP writer ("stored", no compression). Sizes come after the data, so each entry uses a data descriptor.
+const CT=(()=>{const t=new Uint32Array(256);for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[n]=c>>>0}return t})();
+const crc32=(c,u)=>{c^=-1;for(let i=0;i<u.length;i++)c=CT[(c^u[i])&255]^(c>>>8);return(c^-1)>>>0};
+const dosTime=d=>[(d.getHours()<<11)|(d.getMinutes()<<5)|(d.getSeconds()>>1),((d.getFullYear()-1980)<<9)|((d.getMonth()+1)<<5)|d.getDate()];
+function zLocal(name,dt){const nb=new TextEncoder().encode(name),b=new Uint8Array(30+nb.length),v=new DataView(b.buffer);
+  v.setUint32(0,0x04034b50,true);v.setUint16(4,20,true);v.setUint16(6,0x0808,true);v.setUint16(10,dt[0],true);v.setUint16(12,dt[1],true);v.setUint16(26,nb.length,true);b.set(nb,30);return b}
+function zDesc(crc,size){const b=new Uint8Array(16),v=new DataView(b.buffer);v.setUint32(0,0x08074b50,true);v.setUint32(4,crc,true);v.setUint32(8,size,true);v.setUint32(12,size,true);return b}
+function zEnd(list,dt,start){
+  const parts=[];let len=0;
+  for(const e of list){const nb=new TextEncoder().encode(e.name),b=new Uint8Array(46+nb.length),v=new DataView(b.buffer);
+    v.setUint32(0,0x02014b50,true);v.setUint16(4,20,true);v.setUint16(6,20,true);v.setUint16(8,0x0808,true);v.setUint16(12,dt[0],true);v.setUint16(14,dt[1],true);
+    v.setUint32(16,e.crc,true);v.setUint32(20,e.size,true);v.setUint32(24,e.size,true);v.setUint16(28,nb.length,true);v.setUint32(42,e.off,true);b.set(nb,46);parts.push(b);len+=b.length}
+  const t=new Uint8Array(22),w=new DataView(t.buffer);
+  w.setUint32(0,0x06054b50,true);w.setUint16(8,list.length,true);w.setUint16(10,list.length,true);w.setUint32(12,len,true);w.setUint32(16,start,true);parts.push(t);
+  const out=new Uint8Array(len+22);let o=0;for(const x of parts){out.set(x,o);o+=x.length}return out}
+// </zip>
+
+// Browsers without folder access (iOS Safari, Firefox) write to private browser storage through a
+// worker instead of holding the whole file in memory, then hand the finished file to the download.
+const WSRC=`let h,fh,nm,o=0,k=0;onmessage=async e=>{const m=e.data;try{
+if(m.op==="open"){const r=await navigator.storage.getDirectory();nm="ld-"+Date.now()+"-"+(k++);fh=await r.getFileHandle(nm,{create:true});h=await fh.createSyncAccessHandle();h.truncate(0);o=0;postMessage({})}
+else if(m.op==="write"){const u=new Uint8Array(m.buf);h.write(u,{at:o});o+=u.byteLength;postMessage({})}
+else if(m.op==="close"){h.flush();h.close();h=null;postMessage({file:await fh.getFile()})}
+else if(m.op==="drop"){try{h&&h.close()}catch(_){}try{const r=await navigator.storage.getDirectory();await r.removeEntry(nm)}catch(_){}postMessage({})}
+}catch(x){postMessage({err:String(x&&x.message||x)})}}`;
+const work=(m,t)=>new Promise((res,rej)=>{
+  wk=wk||new Worker(URL.createObjectURL(new Blob([WSRC],{type:"text/javascript"})));
+  wk.onmessage=e=>e.data.err?rej(new Error(e.data.err)):res(e.data);
+  wk.postMessage(m,t||[])});
+function save(f,name){const a=document.createElement("a");a.href=URL.createObjectURL(f);a.download=safe(name);a.click();setTimeout(()=>URL.revokeObjectURL(a.href),36e5)}
 
 function decide(m){
   if($("auto").checked&&(dir||!HAS_DIR))return Promise.resolve(true);
@@ -318,26 +413,57 @@ function decide(m){
   });
 }
 
+const validOffer=m=>Array.isArray(m.files)&&m.files.length>0&&m.files.length<=20000&&m.files.every(f=>f&&typeof f.name==="string"&&Number.isFinite(f.size)&&f.size>=0);
+
 async function handle(m){
   if(m.t==="offer"){
-    const ok=await decide(m);
+    if(!validOffer(m)||rx){conn.send(JSON.stringify({t:"reject"}));return}
+    const files=m.files.map(f=>({name:clean(f.name,255)||"file",size:Math.floor(f.size)}));
+    const total=files.reduce((a,f)=>a+f.size,0);
+    if(!HAS_DIR&&!HAS_OPFS&&files.some(f=>f.size>MEMLIM)){
+      conn.send(JSON.stringify({t:"reject"}));
+      addRow("").set(null,"Declined: this browser cannot receive files larger than "+fmt(MEMLIM)+". Use a desktop browser.",true);return}
+    const ok=await decide({files});
     conn.send(JSON.stringify({t:ok?"accept":"reject"}));
-    if(ok){const total=m.files.reduce((a,f)=>a+f.size,0);
-      rx={n:0,count:m.files.length,total,got:0,t0:performance.now(),row:addRow("Receiving "+plural(m.files.length)+"…")}}
+    if(!ok)return;
+    rx={n:0,count:files.length,total,files,got:0,acked:0,row:addRow("Receiving "+plural(files.length)+"…")};
+    if(!dir&&HAS_OPFS&&$("zip").checked&&files.length>1&&total<3.9e9){
+      try{await work({op:"open"});rx.z={list:[],off:0,names:new Set(),dt:dosTime(new Date())}}catch{}}
   }else if(m.t==="file"&&rx){
-    cur={...m,w:null,buf:[]};
-    if(dir)cur.w=await(await dir.getFileHandle(await freeName(safe(m.name)),{create:true})).createWritable();
+    if(cur||rx.n>=rx.count)throw new Error("Unexpected data from the other device.");
+    const f=rx.files[rx.n];   // names and sizes come from the offer you accepted, not from this message
+    cur={name:f.name,size:f.size,got:0,crc:0,w:null,o:false,buf:[]};
+    if(rx.z){
+      const base=safe(f.name);let nm=base;
+      for(let i=1;rx.z.names.has(nm);i++)nm=base.replace(/(\.[^.]*)?$/,` (${i})$1`);
+      rx.z.names.add(nm);cur.zname=nm;cur.zoff=rx.z.off;
+      const h=zLocal(nm,rx.z.dt);rx.z.off+=h.length;await work({op:"write",buf:h.buffer},[h.buffer]);
+    }else if(dir)cur.w=await(await dir.getFileHandle(await freeName(safe(f.name)),{create:true})).createWritable();
+    else if(HAS_OPFS){try{await work({op:"open"});cur.o=true}catch{}}
+    if(!rx.z&&!cur.w&&!cur.o&&f.size>MEMLIM)throw new Error("This browser cannot store a file this large.");
   }else if(m.t==="end"&&cur){
-    if(cur.w)await cur.w.close();
-    else{const a=document.createElement("a");a.href=URL.createObjectURL(new Blob(cur.buf));a.download=safe(cur.name);a.click();setTimeout(()=>URL.revokeObjectURL(a.href),6e4)}
+    if(cur.got!==cur.size)throw new Error("The received size of "+cur.name+" did not match the offer.");
+    if(rx.z){const d=zDesc(cur.crc,cur.size);rx.z.off+=d.length;rx.z.list.push({name:cur.zname,crc:cur.crc,size:cur.size,off:cur.zoff});await work({op:"write",buf:d.buffer},[d.buffer])}
+    else if(cur.w)await cur.w.close();
+    else save(cur.o?(await work({op:"close"})).file:new Blob(cur.buf),cur.name);
     cur=null;rx.n++;
-    if(rx.n===rx.count)rx.row.set(1,`Received ${plural(rx.count)} (${fmt(rx.total)})`+(dir?" and saved to your folder.":"."));
+    if(rx.n===rx.count){
+      if(rx.z){const e=zEnd(rx.z.list,rx.z.dt,rx.z.off);await work({op:"write",buf:e.buffer},[e.buffer]);
+        save((await work({op:"close"})).file,"LocalDrop-"+new Date().toISOString().slice(0,19).replace(/[-:T]/g,"")+".zip")}
+      rx.row.set(1,`Received ${plural(rx.count)} (${fmt(rx.total)})`+(rx.z?" as one ZIP file.":dir?" and saved to your folder.":"."));
+      rx=null;
+    }
   }
 }
 async function chunk(d){
   if(!cur)return;
-  if(cur.w)await cur.w.write(d);else cur.buf.push(d);
-  rx.got+=d.byteLength;
+  const n=d.byteLength;
+  if(cur.got+n>cur.size)throw new Error("The other device sent more data than expected.");
+  if(rx.z){cur.crc=crc32(cur.crc,new Uint8Array(d));rx.z.off+=n;await work({op:"write",buf:d},[d])}
+  else if(cur.w)await cur.w.write(d);else if(cur.o)await work({op:"write",buf:d},[d]);else cur.buf.push(d);
+  cur.got+=n;rx.got+=n;
+  // Tell the sender how much has been written so it never runs far ahead of this device.
+  if(rx.got-rx.acked>=ACK){rx.acked=rx.got;try{conn.send(JSON.stringify({t:"ack",n:rx.got}))}catch{}}
   rx.row.set(rx.got/(rx.total||1),`Receiving ${cur.name} (${rx.n+1} of ${rx.count}): ${Math.round(rx.got/(rx.total||1)*100)}%`);
 }
 
@@ -348,22 +474,24 @@ async function sendFiles(fs){
   const dc=conn.dataChannel;dc.bufferedAmountLowThreshold=BIG;
   const lostErr=()=>new Error("The connection was lost.");
   const flow=async()=>{
-    if(dc.readyState!=="open")throw lostErr();
-    if(dc.bufferedAmount>4*BIG){
-      await new Promise(r=>{dc.onbufferedamountlow=r;dc.addEventListener("close",r,{once:true})});
-      if(dc.readyState!=="open")throw lostErr()}};
+    for(;;){
+      if(cxl)throw new Error("The receiving device stopped the transfer.");
+      if(dc.readyState!=="open")throw lostErr();
+      if(dc.bufferedAmount>4*BIG)await new Promise(r=>{dc.onbufferedamountlow=r;dc.addEventListener("close",r,{once:true})});
+      else if(ackOK&&sentB-ackB>WIN)await new Promise(r=>{ackWake=r;dc.addEventListener("close",r,{once:true})});
+      else return}};
   const total=fs.reduce((a,f)=>a+f.size,0)||1;
   const row=tx=addRow(`Waiting for ${peerName} to accept ${plural(fs.length)}…`);
   try{
     conn.send(JSON.stringify({t:"offer",files:fs.map(f=>({name:f.name,size:f.size}))}));
     const a=await new Promise(r=>waiter=r);
     if(a.t!=="accept"){row.set(null,peerName+" declined the transfer.",true);return}
-    let sent=0;const t0=performance.now();
+    let sent=0;sentB=ackB=0;cxl=false;const t0=performance.now();
     for(const [i,f] of fs.entries()){
       conn.send(JSON.stringify({t:"file",name:f.name,size:f.size}));
       for(let o=0;o<f.size;o+=BIG){
         const b=await f.slice(o,o+BIG).arrayBuffer();
-        for(let k=0;k<b.byteLength;k+=CHUNK){await flow();conn.send(new Uint8Array(b,k,Math.min(CHUNK,b.byteLength-k)))}
+        for(let k=0;k<b.byteLength;k+=CHUNK){await flow();const n=Math.min(CHUNK,b.byteLength-k);conn.send(new Uint8Array(b,k,n));sentB+=n}
         sent+=b.byteLength;
         row.set(sent/total,`Sending ${f.name} (${i+1} of ${fs.length}): ${Math.round(sent/total*100)}%, ${fmt(sent/((performance.now()-t0)/1000||1))}/s`);
       }
@@ -378,7 +506,13 @@ async function sendFiles(fs){
 
 // ---------- Interface ----------
 const copy=async(t,b)=>{try{await navigator.clipboard.writeText(t);const o=b.textContent;b.textContent="Copied";setTimeout(()=>b.textContent=o,1500)}catch{}};
-$("bH").onclick=host;
+$("bH").onclick=()=>host();
+$("nc").onclick=()=>host();
+$("own").onclick=()=>{$("ownrow").hidden=!$("ownrow").hidden;$("ownin").focus()};
+$("ownok").onclick=()=>{
+  const v=$("ownin").value.trim();
+  if(v.length<10||/^(.)\1+$/.test(v)){$("ownmsg").textContent="Use at least 10 characters. A longer phrase is safer.";$("ownmsg").className="m e";return}
+  host(v)};
 $("bJ").onclick=()=>{reset();view("vJoin");$("inp").focus()};
 $("go").onclick=join;
 $("inp").onkeydown=e=>{if(e.key==="Enter")join()};
@@ -405,6 +539,8 @@ document.addEventListener("visibilitychange",()=>{
   if(lost)kick();
 });
 
+if(HAS_OPFS)(async()=>{try{const r=await navigator.storage.getDirectory();for await(const [n] of r.entries())if(n.startsWith("ld-"))await r.removeEntry(n)}catch{}})();
+$("ver").textContent=`Version ${VERSION} · Updated ${BUILT}`;
 setMode(mode);view("vHome");
 // Opening a session link (or scanning its QR code) joins automatically.
 const hp=new URLSearchParams(location.hash.slice(1));
