@@ -95,7 +95,13 @@ progress{display:block;width:100%;height:8px;margin-top:8px}
   <input type="text" id="inp" autocapitalize="none" autocomplete="off" spellcheck="false" placeholder="maple-river-lamp-stone-42">
   <div class="row">
     <button class="p" id="go" data-t>Join</button>
+    <button id="scan" data-t>Scan QR code</button>
     <button id="jx" data-t>Back</button>
+  </div>
+  <div id="scanbox" hidden>
+    <video id="cam" playsinline muted style="width:100%;border-radius:8px;margin-top:12px;background:#000"></video>
+    <p class="m" data-t>Point the camera at the QR code shown on the other device.</p>
+    <div class="row"><button id="scanx" data-t>Cancel</button></div>
   </div>
 </section>
 
@@ -147,9 +153,11 @@ progress{display:block;width:100%;height:8px;margin-top:8px}
 <script>window.Peer||document.write('<script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"><\/script>')</script>
 <script src="vendor/qrcode.js"></script>
 <script>window.qrcode||document.write('<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"><\/script>')</script>
+<script src="vendor/jsQR.js"></script>
+<script>window.jsQR||document.write('<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"><\/script>')</script>
 <script>
 const $=id=>document.getElementById(id);
-const VERSION="1.5.1",BUILT='2026-11-07 17:57';
+const VERSION="1.6.0",BUILT='2026-11-08 20:53';
 
 // ---------- Languages ----------
 // English text is the key. Add a language by adding a dictionary here and an option to the menu.
@@ -216,6 +224,11 @@ const JA={
 "There is no text to send.":"送信するテキストがありません。","The text is too long. The limit is {0} characters.":"テキストが長すぎます。上限は {0} 文字です。",
 "Text sent ({0} characters).":"テキストを送信しました（{0}文字）。","Text received":"テキストを受信しました",
 "The clipboard could not be read. Allow clipboard access, or paste the text into the box.":"クリップボードを読み取れませんでした。アクセスを許可するか、テキストを入力欄に貼り付けてください。",
+"Scan QR code":"QRコードを読み取る",
+"Point the camera at the QR code shown on the other device.":"もう一方のデバイスに表示されているQRコードにカメラを向けてください。",
+"The camera could not be started. Allow camera access, or enter the code instead.":"カメラを起動できませんでした。カメラへのアクセスを許可するか、コードを入力してください。",
+"This QR code is not a Direct Drop session code.":"このQRコードはDirect Dropのセッションコードではありません。",
+"QR code scanning is not available in this browser. Enter the code instead.":"このブラウザーではQRコードの読み取りを利用できません。コードを入力してください。",
 "Transfer complete":"転送が完了しました"};
 let lang="en",awakeKey="",bannerKey="";
 const tr=(s,...a)=>((lang==="ja"&&JA[s])||s).replace(/\{(\d)\}/g,(_,i)=>a[i]);
@@ -266,7 +279,7 @@ function setMode(m){mode=m;try{localStorage.setItem("ld.mode",m)}catch{}
 $("modes").onclick=e=>{if(e.target.dataset.m)setMode(e.target.dataset.m)};
 
 function reset(){
-  clearTimeout(timer);clearInterval(retry);clearInterval(hb);ep++;
+  stopScan();clearTimeout(timer);clearInterval(retry);clearInterval(hb);ep++;
   try{conn&&conn.close()}catch{}try{peer&&peer.destroy()}catch{}
   try{wl&&wl.release()}catch{}
   try{cur&&cur.w&&cur.w.abort().catch(()=>{})}catch{}
@@ -723,6 +736,47 @@ async function readEntry(e,path,out){
 }
 
 // ---------- Interface ----------
+// ---------- Scan a session QR code with the camera ----------
+let camStream,scanTimer,detector,scanBusy,scanCv;
+// <scan>
+// Accepts a session link (the code is in the part after #) or a bare session code.
+function parseScan(x){
+  x=String(x).trim();
+  try{const u=new URL(x),h=new URLSearchParams(u.hash.slice(1));if(h.get("j"))return{j:h.get("j"),m:h.get("m")}}catch{}
+  return x&&x.length<=300&&!/^[a-z][a-z0-9+.-]*:\/\//i.test(x)?{j:x}:null}
+// </scan>
+function stopScan(){
+  clearInterval(scanTimer);scanTimer=null;
+  try{camStream&&camStream.getTracks().forEach(t=>t.stop())}catch{}
+  camStream=null;$("scanbox").hidden=true;$("cam").srcObject=null}
+async function startScan(){
+  say("");
+  if(!window.BarcodeDetector&&!window.jsQR){say(tr("QR code scanning is not available in this browser. Enter the code instead."),true);return}
+  try{camStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:"environment"}},audio:false})}
+  catch{say(tr("The camera could not be started. Allow camera access, or enter the code instead."),true);return}
+  const v=$("cam");v.srcObject=camStream;$("scanbox").hidden=false;
+  try{await v.play()}catch{}
+  if(!detector&&window.BarcodeDetector){try{detector=new BarcodeDetector({formats:["qr_code"]})}catch{}}
+  scanTimer=setInterval(async()=>{
+    if(scanBusy||!v.videoWidth)return;scanBusy=true;
+    let text=null;
+    try{
+      if(detector){const r=await detector.detect(v);if(r[0])text=r[0].rawValue}
+      else if(window.jsQR){
+        scanCv=scanCv||document.createElement("canvas");
+        const w=Math.min(640,v.videoWidth),h=Math.round(v.videoHeight*w/v.videoWidth),cx=scanCv.getContext("2d",{willReadFrequently:true});
+        scanCv.width=w;scanCv.height=h;cx.drawImage(v,0,0,w,h);
+        const r=jsQR(cx.getImageData(0,0,w,h).data,w,h);if(r)text=r.data}
+    }catch{}
+    scanBusy=false;
+    if(!text||!camStream)return;
+    const sc=parseScan(text);stopScan();
+    if(!sc){say(tr("This QR code is not a Direct Drop session code."),true);return}
+    if(sc.m==="lan"||sc.m==="any")setMode(sc.m);
+    $("inp").value=sc.j;join();
+  },200);
+}
+
 const copy=async(x,b)=>{try{await navigator.clipboard.writeText(x);const o=b.textContent;b.textContent=tr("Copied");setTimeout(()=>b.textContent=o,1500)}catch{}};
 $("bH").onclick=()=>host();
 $("nc").onclick=()=>host();
@@ -733,6 +787,8 @@ $("ownok").onclick=()=>{
   host(v)};
 $("bJ").onclick=()=>{reset();view("vJoin");$("inp").focus()};
 $("go").onclick=join;
+$("scan").onclick=startScan;
+$("scanx").onclick=stopScan;
 $("inp").onkeydown=e=>{if(e.key==="Enter")join()};
 $("jx").onclick=()=>{reset();say("")};
 $("cx").onclick=()=>{reset();say("")};

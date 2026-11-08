@@ -1,7 +1,7 @@
 // Direct Drop service worker: lets the page open from the home screen and work from cache when offline.
 // The page itself is always fetched fresh when online, so updates appear after a reload.
-const C="direct-drop-v1";
-const SHELL=["./","index.html","manifest.webmanifest","icon-192.png","icon-512.png","vendor/peerjs.min.js","vendor/qrcode.js"];
+const C="direct-drop-v2";
+const SHELL=["./","index.html","manifest.webmanifest","icon-192.png","icon-512.png","vendor/peerjs.min.js","vendor/qrcode.js","vendor/jsQR.js"];
 self.addEventListener("install",e=>{
   e.waitUntil(caches.open(C).then(c=>Promise.all(SHELL.map(u=>c.add(u).catch(()=>{})))).then(()=>self.skipWaiting()));
 });
