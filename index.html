@@ -49,11 +49,11 @@ progress{display:block;width:100%;height:8px;margin-top:8px}
 <div class="hd">
   <div>
     <h1>Direct Drop</h1>
-    <p class="s" data-t>Direct file transfer between your devices. Files are never uploaded to a server.</p>
+    <p class="s" data-t>Send files directly between your devices. Your files are never uploaded to a server.</p>
   </div>
   <select id="lang" aria-label="Language"><option value="en">English</option><option value="ja">日本語</option></select>
 </div>
-<p id="msg" hidden></p>
+<p id="msg" role="status" aria-live="polite" hidden></p>
 
 <section id="vHome" class="card">
   <h2 data-t>Connection type</h2>
@@ -78,13 +78,13 @@ progress{display:block;width:100%;height:8px;margin-top:8px}
     <button id="cc" data-t>Copy code</button>
     <button id="cl" data-t>Copy link</button>
     <button id="nc" data-t>New code</button>
-    <button id="own" data-t>Use my own phrase</button>
+    <button id="own" data-t>Use my own code</button>
     <button id="cx" data-t>Cancel</button>
   </div>
   <div id="ownrow" hidden>
-    <label for="ownin" class="m" data-t>Your own phrase (at least 10 characters, case-sensitive)</label>
+    <label for="ownin" class="m" data-t>Your own code (at least 10 characters, case-sensitive)</label>
     <input type="text" id="ownin" autocapitalize="none" autocomplete="off" spellcheck="false">
-    <div class="row"><button class="p" id="ownok" data-t>Use this phrase</button></div>
+    <div class="row"><button class="p" id="ownok" data-t>Use this code</button></div>
     <p class="m" id="ownmsg"></p>
   </div>
 </section>
@@ -110,7 +110,7 @@ progress{display:block;width:100%;height:8px;margin-top:8px}
     <div><strong id="peerName"></strong><div class="m" id="route" style="margin:0"></div></div>
     <button id="bye" data-t>Disconnect</button>
   </div>
-  <p class="m e" id="banner" hidden></p>
+  <p class="m e" id="banner" role="status" aria-live="polite" hidden></p>
   <div class="card" id="pA" hidden>
     <h2 data-t>Incoming files</h2>
     <div id="ask"></div>
@@ -132,9 +132,9 @@ progress{display:block;width:100%;height:8px;margin-top:8px}
     <h2 data-t>Options</h2>
     <label class="m" style="display:block"><input type="checkbox" id="auto"> <span data-t>Accept incoming files automatically</span></label>
     <label class="m" style="display:block"><input type="checkbox" id="awake" checked> <span data-t>Keep this device awake while connected</span></label>
-    <label class="m" style="display:block" id="ziprow"><input type="checkbox" id="zip" checked> <span data-t>Receive several files or folders as one ZIP, so the browser asks only once</span></label>
+    <label class="m" style="display:block" id="ziprow"><input type="checkbox" id="zip" checked> <span data-t>Save multiple files or folders as one ZIP (a single download prompt)</span></label>
     <label class="m" style="display:block"><input type="checkbox" id="notify" checked> <span data-t>Notify me when a transfer finishes</span></label>
-    <label class="m" style="display:block"><input type="checkbox" id="sound" checked> <span data-t>Play a sound</span></label>
+    <label class="m" style="display:block"><input type="checkbox" id="sound" checked> <span data-t>Play a sound with notifications</span></label>
     <div class="m"><button class="link" id="allown" hidden data-t>Allow system notifications</button></div>
     <div class="m" id="awakenote" style="margin-top:0"></div>
     <div class="m"><span id="dirnote"></span> <button class="link" id="chg" hidden data-t>Change save folder</button></div>
@@ -144,25 +144,24 @@ progress{display:block;width:100%;height:8px;margin-top:8px}
 
 <footer class="m" style="text-align:center;margin-top:24px">
   <div id="ver"></div>
+  <button class="link" id="upd" hidden data-t>A new version is available. Tap to reload.</button>
   <button class="link" id="inst" hidden data-t>Install as an app</button>
   <div id="ioshint" hidden data-t>To install this page as an app, tap Share, then Add to Home Screen.</div>
 </footer>
 </main>
 
-<script src="vendor/peerjs.min.js"></script>
-<script>window.Peer||document.write('<script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"><\/script>')</script>
-<script src="vendor/qrcode.js"></script>
-<script>window.qrcode||document.write('<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"><\/script>')</script>
-<script src="vendor/jsQR.js"></script>
-<script>window.jsQR||document.write('<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"><\/script>')</script>
+<script>function ld(u){var s=document.createElement("script");s.src=u;document.head.appendChild(s)}</script>
+<script src="vendor/peerjs.min.js" onerror="ld('https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js')"></script>
+<script src="vendor/qrcode.js" onerror="ld('https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js')"></script>
+<script src="vendor/jsQR.js" onerror="ld('https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js')"></script>
 <script>
 const $=id=>document.getElementById(id);
-const VERSION="1.6.0",BUILT='2026-11-08 20:53';
+const VERSION="1.7.0",BUILT='2026-11-10 11:50';
 
 // ---------- Languages ----------
 // English text is the key. Add a language by adding a dictionary here and an option to the menu.
 const JA={
-"Direct file transfer between your devices. Files are never uploaded to a server.":"デバイス間で直接ファイルを転送します。ファイルはサーバーにアップロードされません。",
+"Send files directly between your devices. Your files are never uploaded to a server.":"デバイス間でファイルを直接送信します。ファイルがサーバーにアップロードされることはありません。",
 "Connection type":"接続方法","Local network":"ローカルネットワーク","Internet":"インターネット",
 "Start a session":"セッションを開始","Join a session":"セッションに参加",
 "Start a session on one device and join it from the other. Once connected, either device can send files.":"一方のデバイスでセッションを開始し、もう一方から参加してください。接続後は、どちらのデバイスからでもファイルを送信できます。",
@@ -170,16 +169,16 @@ const JA={
 "Files travel directly between the devices over the internet, never through a server. Some networks, such as mobile data, may block direct connections.":"ファイルはサーバーを経由せず、インターネット経由でデバイス間を直接移動します。モバイルデータ通信など、一部のネットワークでは直接接続が遮断される場合があります。",
 "Session code":"セッションコード",
 "Enter this code on the other device, or scan the QR code with its camera. The code works for one connection and expires after 10 minutes.":"もう一方のデバイスでこのコードを入力するか、カメラでQRコードを読み取ってください。コードは1回の接続にのみ有効で、10分後に失効します。",
-"Copy code":"コードをコピー","Copy link":"リンクをコピー","Share link":"リンクを共有","New code":"新しいコード","Use my own phrase":"自分のフレーズを使う","Cancel":"キャンセル",
-"Your own phrase (at least 10 characters, case-sensitive)":"自分のフレーズ（10文字以上、大文字と小文字を区別します）","Use this phrase":"このフレーズを使う",
-"Use at least 10 characters. A longer phrase is safer.":"10文字以上にしてください。長いフレーズほど安全です。",
+"Copy code":"コードをコピー","Copy link":"リンクをコピー","Share link":"リンクを共有","New code":"新しいコード","Use my own code":"自分のコードを使う","Cancel":"キャンセル",
+"Your own code (at least 10 characters, case-sensitive)":"自分のコード（10文字以上、大文字と小文字を区別します）","Use this code":"このコードを使う",
+"Use at least 10 characters. A longer code is safer.":"10文字以上にしてください。長いコードほど安全です。",
 "Session code shown on the other device":"もう一方のデバイスに表示されているセッションコード","Join":"参加","Back":"戻る",
 "Disconnect":"切断","Incoming files":"受信するファイル","Accept":"受け入れる","Decline":"拒否",
 "Drag files or folders here, or":"ファイルまたはフォルダーをここにドラッグするか、","select files":"ファイルを選択","or":"または","select a folder":"フォルダーを選択",
 "Send text":"テキストを送信","Send clipboard":"クリップボードを送信","Type or paste text to send":"送信するテキストを入力または貼り付け",
 "Options":"オプション","Accept incoming files automatically":"受信ファイルを自動的に受け入れる","Keep this device awake while connected":"接続中はこのデバイスをスリープさせない",
-"Receive several files or folders as one ZIP, so the browser asks only once":"複数のファイルやフォルダーを1つのZIPとして受信する（ブラウザーの確認が1回で済みます）",
-"Notify me when a transfer finishes":"転送が完了したら通知する","Play a sound":"音を鳴らす","Allow system notifications":"システム通知を許可する","Change save folder":"保存先フォルダーを変更",
+"Save multiple files or folders as one ZIP (a single download prompt)":"複数のファイルやフォルダーを1つのZIPとして保存する（ダウンロードの確認が1回で済みます）",
+"Notify me when a transfer finishes":"転送が完了したら通知する","Play a sound with notifications":"通知時に音を鳴らす","Allow system notifications":"システム通知を許可する","Change save folder":"保存先フォルダーを変更",
 "Install as an app":"アプリとしてインストール","To install this page as an app, tap Share, then Add to Home Screen.":"このページをアプリとして追加するには、共有ボタンをタップし、「ホーム画面に追加」を選択してください。",
 "Version {0} · Updated {1}":"バージョン {0} · 更新日 {1}","QR code for this session":"このセッションのQRコード",
 "Other device":"他のデバイス","iPhone":"iPhone","iPad":"iPad","Android device":"Androidデバイス","Windows PC":"Windows PC","Mac":"Mac","Linux PC":"Linux PC",
@@ -197,14 +196,14 @@ const JA={
 "The session code expired. Start a new session.":"セッションコードの有効期限が切れました。新しいセッションを開始してください。",
 "Connecting…":"接続しています…",
 "No session was found for this code. Check the code, or start a new session on the other device.":"このコードのセッションが見つかりません。コードを確認するか、もう一方のデバイスで新しいセッションを開始してください。",
-"The connection timed out. Confirm the code and the connection type on both devices.":"接続がタイムアウトしました。両方のデバイスでコードと接続方法を確認してください。",
+"The connection timed out. Check that both devices use the same code and connection type.":"接続がタイムアウトしました。両方のデバイスで同じコードと接続方法を使用していることを確認してください。",
 "The connection could not be established.":"接続を確立できませんでした。",
-"The other device could not be verified. The session code may be wrong, or the connection was intercepted. Start a new session.":"相手のデバイスを確認できませんでした。セッションコードが違うか、通信が傍受された可能性があります。新しいセッションを開始してください。",
+"The other device could not be verified. The session code may be incorrect, or the connection may have been tampered with. Start a new session.":"相手のデバイスを確認できませんでした。セッションコードが正しくないか、通信が改ざんされた可能性があります。新しいセッションを開始してください。",
 "The other device ended the session.":"相手のデバイスがセッションを終了しました。",
 "Could not reconnect. Start a new session.":"再接続できませんでした。新しいセッションを開始してください。",
 "The connection was lost. Start a new session.":"接続が切れました。新しいセッションを開始してください。",
 "The connection type could not be determined. Please try again.":"接続の種類を判定できませんでした。もう一度お試しください。",
-"This connection is not on your local network ({0} to {1}). Connect both devices to the same Wi-Fi network, or select Internet.":"この接続はローカルネットワーク上ではありません（{0} と {1}）。両方のデバイスを同じWi-Fiに接続するか、「インターネット」を選択してください。",
+"This connection is not on your local network. Connect both devices to the same Wi-Fi network, or select Internet. (Details: {0} to {1})":"この接続はローカルネットワーク上ではありません。両方のデバイスを同じWi-Fiに接続するか、「インターネット」を選択してください。（詳細: {0} と {1}）",
 "Copied":"コピーしました","Copy":"コピー","Open link":"リンクを開く",
 "{0} wants to send {1} ({2}): {3}":"{0} が {1}（{2}）を送信しようとしています: {3}",
 "Receiving {0}…":"{0} を受信しています…","Receiving {0} ({1} of {2}): {3}%":"{0} を受信中（{1}/{2}）: {3}%",
@@ -229,10 +228,17 @@ const JA={
 "The camera could not be started. Allow camera access, or enter the code instead.":"カメラを起動できませんでした。カメラへのアクセスを許可するか、コードを入力してください。",
 "This QR code is not a Direct Drop session code.":"このQRコードはDirect Dropのセッションコードではありません。",
 "QR code scanning is not available in this browser. Enter the code instead.":"このブラウザーではQRコードの読み取りを利用できません。コードを入力してください。",
+"Transfer canceled.":"転送をキャンセルしました。",
+"The other device canceled the transfer.":"相手のデバイスが転送をキャンセルしました。",
+"Added to the queue. It will start when the current transfer finishes.":"キューに追加しました。現在の転送が完了すると開始されます。",
+"A new version is available. Tap to reload.":"新しいバージョンがあります。タップして再読み込みしてください。",
+"Reloading will end the current session. Reload anyway?":"再読み込みすると現在のセッションが終了します。続行しますか？",
+"Please open Direct Drop in its own tab or window.":"Direct Dropは単独のタブまたはウィンドウで開いてください。",
 "Transfer complete":"転送が完了しました"};
 let lang="en",awakeKey="",bannerKey="";
 const tr=(s,...a)=>((lang==="ja"&&JA[s])||s).replace(/\{(\d)\}/g,(_,i)=>a[i]);
 const plural=n=>lang==="ja"?`${n}個のファイル`:`${n} file${n===1?"":"s"}`;
+if(window.top!==window.self){document.body.textContent=tr("Please open Direct Drop in its own tab or window.");throw 0}
 function detectLang(){
   try{const s=localStorage.getItem("ld.lang");if(s==="en"||s==="ja")return s}catch{}
   for(const l of navigator.languages||[navigator.language||"en"]){const c=String(l).slice(0,2).toLowerCase();if(c==="ja"||c==="en")return c}
@@ -255,7 +261,7 @@ const NOTES={
 const CHUNK=65536, BIG=1<<20, TTL=6e5, VIEWS=["vHome","vHost","vJoin","vLive"], HAS_DIR=!!window.showDirectoryPicker,
   ACK=4*BIG, WIN=16*BIG, MEMLIM=400*BIG, HAS_OPFS=!!(window.Worker&&navigator.storage&&navigator.storage.getDirectory);
 let mode="lan",peer,conn,timer,waiter,lock,dir,cur,rx,busy,wl,hostLink,route="",routeKey="Local network",peerName="",role,tid,sid,lost,up,retry,hb,seen=0,job,trying,
-  sentB=0,ackB=0,ackWake,ackOK,cxl,wk,authKey,peerVer,ep=0,cg=0,reconWait,stWait,decRes,doneId,q=Promise.resolve();
+  sentB=0,ackB=0,ackWake,ackOK,cxl,wk,authKey,peerVer,ep=0,cg=0,reconWait,stWait,decRes,decId,doneId,cxlLocal,pending=[],q=Promise.resolve();
 try{mode=localStorage.getItem("ld.mode")==="any"?"any":"lan"}catch{}
 
 // Replacing `config` removes PeerJS's built-in TURN relay, so files can never be relayed.
@@ -286,7 +292,7 @@ function reset(){
   if((rx&&rx.z)||(cur&&cur.o))work({op:"drop"}).catch(()=>{});
   reconWait&&reconWait.rej(new Error(tr("The session ended.")));
   decRes&&decRes(false);
-  conn=peer=waiter=cur=rx=job=wl=dir=role=tid=sid=authKey=reconWait=stWait=null;lock=busy=lost=up=trying=ackOK=false;
+  conn=peer=waiter=cur=rx=job=wl=dir=role=tid=sid=authKey=reconWait=stWait=null;pending=[];lock=busy=lost=up=trying=ackOK=false;
   $("list").innerHTML="";$("pA").hidden=true;setBanner();$("auto").checked=false;view("vHome")}
 const fail=m=>{reset();say(m,true)};
 
@@ -345,7 +351,7 @@ async function check(c){
   const [l,r]=p,ty=x=>x.candidateType==="host"||x.candidateType==="prflx";
   const local=ty(l)&&ty(r)&&onLink(l,r);
   if(mode==="lan"&&!local){
-    fail(tr("This connection is not on your local network ({0} to {1}). Connect both devices to the same Wi-Fi network, or select Internet.",desc(l),desc(r)));return false}
+    fail(tr("This connection is not on your local network. Connect both devices to the same Wi-Fi network, or select Internet. (Details: {0} to {1})",desc(l),desc(r)));return false}
   routeKey=local?"Local network":"Internet, direct connection";return true;
 }
 
@@ -394,13 +400,13 @@ async function join(){
     c.on("data",onData);c.on("close",()=>gone(c));
     c.on("open",()=>{clearTimeout(timer);established(c)});
   });
-  timer=setTimeout(()=>{reset();view("vJoin");say(tr("The connection timed out. Confirm the code and the connection type on both devices."),true)},25000);
+  timer=setTimeout(()=>{reset();view("vJoin");say(tr("The connection timed out. Check that both devices use the same code and connection type."),true)},25000);
 }
 
 async function established(c){
   const hs=handshake(c);
   if(!await check(c))return;
-  if(!await hs){fail(tr("The other device could not be verified. The session code may be wrong, or the connection was intercepted. Start a new session."));return}
+  if(!await hs){fail(tr("The other device could not be verified. The session code may be incorrect, or the connection may have been tampered with. Start a new session."));return}
   c.send(JSON.stringify({t:"hello",n:devName(),s:role==="host"?sid:undefined,k:1,v:VERSION}));
   cg++;up=true;beat();say("");renderLive();view("vLive");holdAwake();
 }
@@ -461,7 +467,7 @@ function beat(){
   hb=setInterval(()=>{
     if(!conn||lost)return;
     try{conn.send(JSON.stringify({t:"ping"}))}catch{}
-    if(Date.now()-seen>15000)gone(conn);
+    if(Date.now()-seen>(document.hidden?12e4:15000))gone(conn);
   },5000);
 }
 
@@ -496,10 +502,12 @@ const permUi=()=>{$("allown").hidden=!($("notify").checked&&"Notification" in wi
 const askPerm=()=>{try{if("Notification" in window&&Notification.permission==="default")Promise.resolve(Notification.requestPermission()).then(permUi)}catch{}};
 
 // ---------- Messages from the other device ----------
-function addRow(txt){
+function addRow(txt,onCancel){
   const li=document.createElement("li");li.innerHTML="<span></span><progress max='1' value='0' hidden></progress>";
-  const s=li.firstChild,p=li.lastChild;$("list").prepend(li);
-  const o={set(v,x,err){s.textContent=x;s.className=err?"e":"";p.hidden=v==null||v>=1;if(v!=null)p.value=v}};
+  const s=li.firstChild,p=li.lastChild;let cb=null;
+  if(onCancel){cb=document.createElement("button");cb.className="link";cb.style.display="block";cb.style.marginTop="8px";cb.textContent=tr("Cancel");cb.onclick=onCancel;li.append(cb)}
+  $("list").prepend(li);
+  const o={set(v,x,err){s.textContent=x;s.className=err?"e":"";p.hidden=v==null||v>=1;if(v!=null)p.value=v;if(cb)cb.hidden=!!err||(v!=null&&v>=1)}};
   o.set(null,txt);return o}
 function showText(x){
   const li=document.createElement("li"),h=document.createElement("div"),p=document.createElement("div"),r=document.createElement("div");
@@ -515,13 +523,30 @@ function sendText(x){
   try{conn.send(JSON.stringify({t:"text",x}))}catch{say(tr("Not connected. Wait for the connection to be restored."),true);return false}
   say("");addRow(tr("Text sent ({0} characters).",x.length));return true}
 
+// Stops an incoming transfer and removes any partly written file.
+function discardRx(msg){
+  if(!rx)return;
+  try{cur&&cur.w&&cur.w.abort().catch(()=>{})}catch{}
+  if(rx.z||(cur&&cur.o))work({op:"drop"}).catch(()=>{});
+  rx.row.set(null,msg,true);rx=cur=null}
+const enq=f=>{const e=ep;q=q.then(()=>e===ep?f():0).catch(err=>{
+  if(lost)return;
+  if(rx){discardRx(tr("Error: {0}",err.message));try{conn.send(JSON.stringify({t:"cancel"}))}catch{}}
+  else addRow("").set(null,tr("Error: {0}",err.message),true)
+})};
+function cancelIn(){
+  const id=rx&&rx.id;if(!id)return;
+  try{conn&&conn.send(JSON.stringify({t:"cancel",id}))}catch{}
+  enq(()=>{if(rx&&rx.id===id)discardRx(tr("Transfer canceled."))})}
+function cancelOut(){
+  if(!job)return;
+  job.canceled=true;cxl=true;cxlLocal=true;
+  try{conn&&conn.send(JSON.stringify({t:"abort",id:job.id}))}catch{}
+  if(waiter){const w=waiter;waiter=null;w({t:"reject"})}
+  const w=ackWake;ackWake=null;w&&w()}
 function onData(d){
   seen=Date.now();
-  const run=f=>{const e=ep;q=q.then(()=>e===ep?f():0).catch(err=>{
-    if(lost)return;
-    addRow("").set(null,tr("Error: {0}",err.message),true);
-    if(rx){cur&&cur.w&&cur.w.abort().catch(()=>{});(rx.z||(cur&&cur.o))&&work({op:"drop"}).catch(()=>{});rx=cur=null;try{conn.send(JSON.stringify({t:"cancel"}))}catch{}}
-  })};
+  const run=enq;
   if(typeof d!=="string"){run(()=>chunk(d));return}
   let m;try{m=JSON.parse(d)}catch{return}
   if(!m||typeof m!=="object")return;
@@ -529,7 +554,8 @@ function onData(d){
     case"hello":peerName=clean(m.n,40)||peerName;peerVer=clean(m.v,20);if(m.s&&role==="join")sid=clean(m.s,64);ackOK=!!m.k;renderLive();break;
     case"ping":case"auth":break;
     case"ack":{ackB=m.n;const w=ackWake;ackWake=null;w&&w();break}
-    case"cancel":{cxl=true;const w=ackWake;ackWake=null;w&&w();break}
+    case"cancel":{cxl=true;cxlLocal=false;const w=ackWake;ackWake=null;w&&w();break}
+    case"abort":{const id=m.id;enq(()=>{if(rx&&rx.id===id)discardRx(tr("The other device canceled the transfer."))});if(decId===id&&decRes)decRes(false);break}
     case"accept":case"reject":{const w=waiter;waiter=null;w&&w(m);break}
     case"state":{const w=stWait;stWait=null;w&&w(m);break}
     case"done":if(job&&m.id===job.id){job.done=true;const w=job.doneRes;job.doneRes=null;w&&w()}break;
@@ -583,6 +609,7 @@ function decide(m){
   if($("auto").checked&&(dir||!HAS_DIR))return Promise.resolve(true);
   const names=m.files.map(f=>f.name);
   return new Promise(res=>{
+    decId=m.id;
     decRes=v=>{decRes=null;$("pA").hidden=true;res(v)};
     $("ask").textContent=tr("{0} wants to send {1} ({2}): {3}",pn(),plural(m.files.length),fmt(m.files.reduce((a,f)=>a+f.size,0)),names.slice(0,4).join(", ")+(names.length>4?", …":""));
     $("pA").hidden=false;
@@ -602,11 +629,11 @@ async function handle(m){
     if(!HAS_DIR&&!HAS_OPFS&&files.some(f=>f.size>MEMLIM)){
       conn.send(JSON.stringify({t:"reject"}));
       addRow("").set(null,tr("Declined: this browser cannot receive files larger than {0}. Use a desktop browser.",fmt(MEMLIM)),true);return}
-    const ok=await decide({files});
+    const ok=await decide({files,id:m.id});
     if(!conn)return;
     conn.send(JSON.stringify({t:ok?"accept":"reject"}));
     if(!ok)return;
-    rx={id:m.id,n:0,count:files.length,total,files,got:0,acked:0,row:addRow(tr("Receiving {0}…",plural(files.length)))};
+    rx={id:m.id,n:0,count:files.length,total,files,got:0,acked:0,row:addRow(tr("Receiving {0}…",plural(files.length)),cancelIn)};
     const hasPath=files.some(f=>f.name.includes("/"));
     if(!dir&&HAS_OPFS&&(hasPath||($("zip").checked&&files.length>1))&&total<3.9e9&&files.length<65000){
       try{await work({op:"open"});rx.z={list:[],off:0,names:new Set(),dt:dosTime(new Date())}}catch{}}
@@ -682,7 +709,7 @@ async function pump(j){
       const dc=c.dataChannel;dc.bufferedAmountLowThreshold=BIG;
       const snd=x=>{try{c.send(x)}catch{throw lostErr()}};
       const flow=async()=>{for(;;){
-        if(cxl)throw new Error(tr("The receiving device stopped the transfer."));
+        if(cxl)throw Object.assign(new Error(tr(cxlLocal?"Transfer canceled.":"The receiving device stopped the transfer.")),{canceled:true});
         if(dc.readyState!=="open")throw lostErr();
         if(dc.bufferedAmount>4*BIG)await new Promise(r=>{dc.onbufferedamountlow=r;dc.addEventListener("close",r,{once:true})});
         else if(ackOK&&sentB-ackB>WIN)await new Promise(r=>{ackWake=r;dc.addEventListener("close",r,{once:true})});
@@ -706,25 +733,27 @@ async function pump(j){
 }
 
 async function sendFiles(list){
-  if(!list.length||busy)return;
+  if(!list.length)return;
+  if(busy){pending.push(list);say(tr("Added to the queue. It will start when the current transfer finishes."));return}
   if(!conn||lost){say(tr("Not connected. Wait for the connection to be restored."),true);return}
   const fs=items(list).map(x=>({f:x.f,p:x.p,size:x.f.size}));
   const offer={t:"offer",id:hex(crypto.getRandomValues(new Uint8Array(8))),files:fs.map(x=>({name:x.p,size:x.size}))},js=JSON.stringify(offer);
   if(js.length>2e5){say(tr("Too many files for one transfer. Send them in smaller batches."),true);return}
   say("");busy=true;
   const total=fs.reduce((a,x)=>a+x.size,0)||1;
-  const row=addRow(tr("Waiting for {0} to accept {1}…",pn(),plural(fs.length)));
+  const row=addRow(tr("Waiting for {0} to accept {1}…",pn(),plural(fs.length)),cancelOut);
   job={id:offer.id,fs,total,i:0,o:0,row,t0:performance.now(),base:0};
   try{
     conn.send(js);
     const a=await new Promise(r=>waiter=r);
+    if(job.canceled){row.set(null,tr("Transfer canceled."),true);pending=[];return}
     if(a.lost){row.set(null,tr("The connection was lost."),true);return}
     if(a.t!=="accept"){row.set(null,tr("{0} declined the transfer.",pn()),true);return}
-    sentB=ackB=0;cxl=false;job.t0=performance.now();
+    sentB=ackB=0;cxl=false;cxlLocal=false;job.t0=performance.now();
     await pump(job);
     row.set(1,tr("Sent {0} ({1}).",plural(fs.length),fmt(total)));notifyDone(tr("Transfer complete"));
-  }catch(e){row.set(null,tr("Transfer failed: {0}",e.message),true)}
-  finally{busy=false;job=null}
+  }catch(e){row.set(null,e.canceled?e.message:tr("Transfer failed: {0}",e.message),true);if(e.canceled)pending=[]}
+  finally{busy=false;job=null;if(pending.length&&conn&&!lost)setTimeout(()=>sendFiles(pending.shift()),0)}
 }
 
 // Folders: drag and drop and the folder picker both keep the relative path of every file.
@@ -783,7 +812,7 @@ $("nc").onclick=()=>host();
 $("own").onclick=()=>{$("ownrow").hidden=!$("ownrow").hidden;$("ownin").focus()};
 $("ownok").onclick=()=>{
   const v=$("ownin").value.trim();
-  if(v.length<10||/^(.)\1+$/.test(v)){$("ownmsg").textContent=tr("Use at least 10 characters. A longer phrase is safer.");$("ownmsg").className="m e";return}
+  if(v.length<10||/^(.)\1+$/.test(v)){$("ownmsg").textContent=tr("Use at least 10 characters. A longer code is safer.");$("ownmsg").className="m e";return}
   host(v)};
 $("bJ").onclick=()=>{reset();view("vJoin");$("inp").focus()};
 $("go").onclick=join;
@@ -815,11 +844,23 @@ for(const k of ["awake","notify","sound"]){
   $(k).onchange=()=>{try{localStorage.setItem("ld."+k,$(k).checked?"1":"0")}catch{}
     if(k==="awake")holdAwake();if(k==="notify"&&$(k).checked)askPerm();permUi()}}
 $("allown").onclick=askPerm;
+// Pasting files or images (Ctrl+V or Cmd+V) sends them.
+document.addEventListener("paste",e=>{
+  const f=[...((e.clipboardData&&e.clipboardData.files)||[])];
+  if(f.length&&up&&!lost){e.preventDefault();sendFiles(f)}});
+// A new version is announced here; reloading is left to you so a running transfer is never interrupted.
+async function checkUpdate(){
+  if(location.protocol!=="https:")return;
+  try{const t=await(await fetch(location.pathname,{cache:"no-store"})).text(),m=/BUILT='2026-11-10 11:50']*)'/.exec(t);
+    if(m&&m[1]!==BUILT)$("upd").hidden=false}catch{}}
+$("upd").onclick=()=>{if(!up||confirm(tr("Reloading will end the current session. Reload anyway?")))location.reload()};
+setTimeout(checkUpdate,4000);setInterval(checkUpdate,18e5);
 $("lang").onchange=()=>setLang($("lang").value,true);
 document.addEventListener("pointerdown",unlockAudio,{once:true});
 document.addEventListener("visibilitychange",()=>{
   if(document.hidden)return;
   document.title="Direct Drop";
+  checkUpdate();
   if(up||role)holdAwake();
   if(lost)kick();
 });
