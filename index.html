@@ -156,7 +156,7 @@ progress{display:block;width:100%;height:8px;margin-top:8px}
 <script src="vendor/jsQR.js" onerror="ld('https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js')"></script>
 <script>
 const $=id=>document.getElementById(id);
-const VERSION="1.7.0",BUILT='2026-11-10 11:50';
+const VERSION="1.7.0",BUILT='2026-11-11 10:26';
 
 // ---------- Languages ----------
 // English text is the key. Add a language by adding a dictionary here and an option to the menu.
@@ -851,7 +851,7 @@ document.addEventListener("paste",e=>{
 // A new version is announced here; reloading is left to you so a running transfer is never interrupted.
 async function checkUpdate(){
   if(location.protocol!=="https:")return;
-  try{const t=await(await fetch(location.pathname,{cache:"no-store"})).text(),m=/BUILT='2026-11-10 11:50']*)'/.exec(t);
+  try{const t=await(await fetch(location.pathname,{cache:"no-store"})).text(),m=/BUILT='2026-11-11 10:26']*)'/.exec(t);
     if(m&&m[1]!==BUILT)$("upd").hidden=false}catch{}}
 $("upd").onclick=()=>{if(!up||confirm(tr("Reloading will end the current session. Reload anyway?")))location.reload()};
 setTimeout(checkUpdate,4000);setInterval(checkUpdate,18e5);
