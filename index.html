@@ -42,6 +42,12 @@ textarea{resize:vertical;margin-top:12px}
 #list li{background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:12px 16px;margin-bottom:8px;font-size:14px}
 .tx{white-space:pre-wrap;word-break:break-word;max-height:160px;overflow:auto}
 progress{display:block;width:100%;height:8px;margin-top:8px}
+#oqr{display:block;background:#fff;padding:6px;border-radius:8px;image-rendering:pixelated;margin:8px 0;width:min(100%,380px);height:auto}
+.g{display:grid;grid-template-columns:repeat(auto-fill,minmax(84px,1fr));gap:6px;margin:8px 0}
+.g a{display:flex;align-items:center;justify-content:center;position:relative;aspect-ratio:1;border:1px solid var(--bd);border-radius:8px;overflow:hidden;background:var(--bg);color:var(--mut);font-size:11px;text-decoration:none;word-break:break-all;padding:2px;text-align:center}
+.g img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.g b{position:absolute;right:4px;bottom:2px;font-size:12px;color:#fff;text-shadow:0 0 3px #000}
+.pr{display:flex;justify-content:space-between;align-items:center;gap:12px;margin:8px 0}
 </style>
 </head>
 <body>
@@ -67,6 +73,17 @@ progress{display:block;width:100%;height:8px;margin-top:8px}
     <button id="bJ" data-t>Join a session</button>
   </div>
   <p class="m" data-t>Start a session on one device and join it from the other. Once connected, either device can send files.</p>
+  <div id="pairbox" hidden>
+    <h2 data-t>Paired devices</h2>
+    <div id="pairlist"></div>
+    <p class="m" data-t>Open Direct Drop on both devices, then tap Connect on each.</p>
+  </div>
+  <div id="resbox" hidden>
+    <h2 data-t>Resume session</h2>
+    <p class="m" id="restxt"></p>
+    <div class="row"><button class="p" id="resgo" data-t>Resume</button><button id="resx" data-t>Dismiss</button></div>
+  </div>
+  <p class="m"><button class="link" id="bO" data-t>Connect without internet</button></p>
 </section>
 
 <section id="vHost" class="card" hidden>
@@ -105,12 +122,46 @@ progress{display:block;width:100%;height:8px;margin-top:8px}
   </div>
 </section>
 
+<section id="vWait" class="card" hidden>
+  <h2 id="waitT"></h2>
+  <p class="m" id="waitM"></p>
+  <div class="row"><button id="wx" data-t>Cancel</button></div>
+</section>
+
+<section id="vOff" class="card" hidden>
+  <h2 data-t>Connect without internet</h2>
+  <div id="offHome">
+    <p class="m" data-t>Both devices must be on the same Wi-Fi or local network. No internet is needed. Each device shows a QR code and the other scans it.</p>
+    <div class="row"><button class="p" id="offA" data-t>Show QR code first</button><button id="offB" data-t>Scan QR code first</button><button id="offX" data-t>Back</button></div>
+  </div>
+  <div id="offShow" hidden>
+    <p class="m" id="offT"></p>
+    <img id="oqr" alt="">
+    <div class="row"><button class="p" id="offN" data-t>Next</button><button id="offC" data-t>Cancel</button></div>
+  </div>
+  <div id="offScan" hidden>
+    <video id="ocam" playsinline muted style="width:100%;border-radius:8px;background:#000"></video>
+    <p class="m" data-t>Scan the QR code shown on the other device.</p>
+    <div class="row"><button id="offC2" data-t>Cancel</button></div>
+  </div>
+</section>
+
 <section id="vLive" hidden>
   <div class="card top">
     <div><strong id="peerName"></strong><div class="m" id="route" style="margin:0"></div></div>
-    <button id="bye" data-t>Disconnect</button>
+    <div class="row" style="margin:0"><button id="pairb" data-t>Pair this device</button><button id="bye" data-t>Disconnect</button></div>
   </div>
   <p class="m e" id="banner" role="status" aria-live="polite" hidden></p>
+  <div class="card" id="pP" hidden>
+    <h2 data-t>Pair this device</h2>
+    <div id="pPt"></div>
+    <div class="row"><button class="p" id="pyes" data-t>Accept</button><button id="pno" data-t>Decline</button></div>
+  </div>
+  <div class="card" id="pJ" hidden>
+    <h2 data-t>Continue the transfer</h2>
+    <div id="pJt"></div>
+    <div class="row"><button class="p" id="jf" data-t>Select files</button><button id="jd" data-t>Select a folder</button><button id="js" data-t>Skip</button></div>
+  </div>
   <div class="card" id="pA" hidden>
     <h2 data-t>Incoming files</h2>
     <div id="ask"></div>
@@ -139,6 +190,11 @@ progress{display:block;width:100%;height:8px;margin-top:8px}
     <div class="m" id="awakenote" style="margin-top:0"></div>
     <div class="m"><span id="dirnote"></span> <button class="link" id="chg" hidden data-t>Change save folder</button></div>
   </div>
+  <div class="card" id="gal" hidden>
+    <h2 data-t>Photos</h2>
+    <div class="g" id="thumbs"></div>
+    <div class="row"><button class="p" id="sall" data-t>Save all</button><button id="gclr" data-t>Clear</button></div>
+  </div>
   <ul id="list"></ul>
 </section>
 
@@ -156,8 +212,8 @@ progress{display:block;width:100%;height:8px;margin-top:8px}
 <script src="vendor/jsQR.js" onerror="ld('https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js')"></script>
 <script>
 const $=id=>document.getElementById(id);
-const VERSION="1.7.1";
-const BUILT='2026-11-11 10:35';
+const VERSION="1.8.0";
+const BUILT='2026-11-13 15:33';
 
 // ---------- Languages ----------
 // English text is the key. Add a language by adding a dictionary here and an option to the menu.
@@ -235,7 +291,27 @@ const JA={
 "A new version is available. Tap to reload.":"新しいバージョンがあります。タップして再読み込みしてください。",
 "Reloading will end the current session. Reload anyway?":"再読み込みすると現在のセッションが終了します。続行しますか？",
 "Please open Direct Drop in its own tab or window.":"Direct Dropは単独のタブまたはウィンドウで開いてください。",
-"Transfer complete":"転送が完了しました"};
+"Transfer complete":"転送が完了しました",
+"Paired devices":"ペアリング済みのデバイス","Open Direct Drop on both devices, then tap Connect on each.":"両方のデバイスでDirect Dropを開き、それぞれで「接続」をタップしてください。",
+"Connect":"接続","Forget":"削除","Connecting to {0}":"{0} に接続しています",
+"Open Direct Drop on {0} and tap Connect there too. Both devices must use the same connection type.":"{0} でもDirect Dropを開き、「接続」をタップしてください。両方のデバイスで同じ接続方法を選択する必要があります。",
+"Pair this device":"このデバイスをペアリング","{0} wants to pair with this device. Paired devices connect with one tap.":"{0} がこのデバイスとのペアリングを希望しています。ペアリング済みのデバイスはワンタップで接続できます。",
+"Paired with {0}.":"{0} とペアリングしました。","{0} declined to pair.":"{0} がペアリングを拒否しました。",
+"Nobody connected. Open Direct Drop on both devices and try again.":"接続がありませんでした。両方のデバイスでDirect Dropを開き、もう一度お試しください。",
+"Resume session":"セッションを再開","The session with {0} was interrupted. Resume it to continue.":"{0} とのセッションが中断されました。再開して続行できます。","Resume":"再開","Dismiss":"閉じる",
+"Continue the transfer":"転送を続ける","Select files":"ファイルを選択","Select a folder":"フォルダーを選択","Select the same files to continue the interrupted transfer: {0} ({1}).":"中断された転送を続けるには、同じファイルを選択してください: {0}（{1}）。","Skip":"スキップ",
+"These files do not match the interrupted transfer. Select the same files.":"選択したファイルが中断された転送と一致しません。同じファイルを選択してください。",
+"Photos":"写真","Save all":"すべて保存","Clear":"クリア","Photos could not be saved. Try again.":"写真を保存できませんでした。もう一度お試しください。",
+"Connect without internet":"インターネットなしで接続",
+"Both devices must be on the same Wi-Fi or local network. No internet is needed. Each device shows a QR code and the other scans it.":"両方のデバイスが同じWi-Fiまたはローカルネットワークに接続されている必要があります。インターネットは不要です。一方のデバイスがQRコードを表示し、もう一方が読み取ります。",
+"Show QR code first":"先にQRコードを表示","Scan QR code first":"先にQRコードを読み取る","Next":"次へ",
+"Show this QR code to the other device, then tap Next.":"このQRコードをもう一方のデバイスに読み取らせてから、「次へ」をタップしてください。",
+"Show this QR code to the other device. The connection starts when it is scanned.":"このQRコードをもう一方のデバイスに読み取らせてください。読み取られると接続が始まります。",
+"Scan the QR code shown on the other device.":"もう一方のデバイスに表示されているQRコードを読み取ってください。",
+"This browser does not support connecting without internet.":"このブラウザーでは、インターネットなしの接続を利用できません。",
+"This QR code is not from Direct Drop.":"このQRコードはDirect Dropのものではありません。",
+"This is not the QR code expected at this step. Follow the steps on both devices.":"この手順で必要なQRコードではありません。両方のデバイスの手順に従ってください。",
+"No local network address was found. Connect both devices to the same Wi-Fi network.":"ローカルネットワークのアドレスが見つかりませんでした。両方のデバイスを同じWi-Fiに接続してください。"};
 let lang="en",awakeKey="",bannerKey="";
 const tr=(s,...a)=>((lang==="ja"&&JA[s])||s).replace(/\{(\d)\}/g,(_,i)=>a[i]);
 const plural=n=>lang==="ja"?`${n}個のファイル`:`${n} file${n===1?"":"s"}`;
@@ -247,8 +323,8 @@ function detectLang(){
 function applyLang(){
   document.querySelectorAll("[data-t]").forEach(e=>{if(!e.dataset.k)e.dataset.k=e.textContent;e.textContent=tr(e.dataset.k)});
   document.querySelectorAll("[data-tp]").forEach(e=>e.placeholder=tr(e.dataset.tp));
-  $("qr").alt=tr("QR code for this session");$("ver").textContent=tr("Version {0} · Updated {1}",VERSION,BUILT);
-  setMode(mode);awakeMsg(awakeKey);setBanner(bannerKey);if(up)renderLive()}
+  $("qr").alt=$("oqr").alt=tr("QR code for this session");$("ver").textContent=tr("Version {0} · Updated {1}",VERSION,BUILT);
+  setMode(mode);awakeMsg(awakeKey);setBanner(bannerKey);renderHome();if(up)renderLive()}
 function setLang(l,save){
   lang=l;if(save)try{localStorage.setItem("ld.lang",l)}catch{}
   document.documentElement.lang=l;$("lang").value=l;applyLang()}
@@ -259,10 +335,11 @@ const STUN=[{urls:"stun:stun.l.google.com:19302"},{urls:"stun:stun.cloudflare.co
 const NOTES={
   lan:"Both devices must be on the same Wi-Fi or local network. Files stay on that network; only the initial handshake uses the internet.",
   any:"Files travel directly between the devices over the internet, never through a server. Some networks, such as mobile data, may block direct connections."};
-const CHUNK=65536, BIG=1<<20, TTL=6e5, VIEWS=["vHome","vHost","vJoin","vLive"], HAS_DIR=!!window.showDirectoryPicker,
+const CHUNK=65536, BIG=1<<20, TTL=6e5, LOST=6e5, PAIR="pair|", CAN_SHARE=!!navigator.canShare, VIEWS=["vHome","vHost","vJoin","vWait","vOff","vLive"], HAS_DIR=!!window.showDirectoryPicker,
   ACK=4*BIG, WIN=16*BIG, MEMLIM=400*BIG, HAS_OPFS=!!(window.Worker&&navigator.storage&&navigator.storage.getDirectory);
 let mode="lan",peer,conn,timer,waiter,lock,dir,cur,rx,busy,wl,hostLink,route="",routeKey="Local network",peerName="",role,tid,sid,lost,up,retry,hb,seen=0,job,trying,
-  sentB=0,ackB=0,ackWake,ackOK,cxl,wk,authKey,peerVer,ep=0,cg=0,reconWait,stWait,decRes,decId,doneId,cxlLocal,pending=[],q=Promise.resolve();
+  sentB=0,ackB=0,ackWake,ackOK,cxl,wk,authKey,peerVer,ep=0,cg=0,reconWait,stWait,decRes,decId,doneId,cxlLocal,pending=[],q=Promise.resolve(),
+  offline,opc,code,pairId,pairReq,pairTo,pendKey,rj,wnm,lastP=0,lastSave=0,gal=[],thumbQ=[],thumbBusy,wq=Promise.resolve();
 try{mode=localStorage.getItem("ld.mode")==="any"?"any":"lan"}catch{}
 
 // Replacing `config` removes PeerJS's built-in TURN relay, so files can never be relayed.
@@ -285,16 +362,30 @@ function setMode(m){mode=m;try{localStorage.setItem("ld.mode",m)}catch{}
   document.querySelectorAll("#modes button").forEach(b=>b.classList.toggle("on",b.dataset.m===m))}
 $("modes").onclick=e=>{if(e.target.dataset.m)setMode(e.target.dataset.m)};
 
-function reset(){
+// Small helpers for the saved data. Every key lives in this browser only.
+const getJ=k=>{try{return JSON.parse(localStorage.getItem(k))}catch{return null}};
+const setJ=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch{}};
+const delJ=k=>{try{localStorage.removeItem(k)}catch{}};
+const pairs=()=>{const a=getJ("ld.pairs");return Array.isArray(a)?a.filter(e=>e&&typeof e.i==="string"&&typeof e.k==="string"&&(e.s==="a"||e.s==="b")):[]};
+// The last session is kept for 10 minutes so a reloaded page can rejoin it.
+const clearSess=()=>delJ("ld.sess");
+function saveSess(){if(offline||!code||!sid||!role)return;setJ("ld.sess",{r:role,p:pairId?"":code,q:pairId||"",s:sid,m:mode,n:peerName,t:Date.now()})}
+function loadSess(){const r=getJ("ld.sess");if(r&&typeof r.s==="string"&&(r.r==="host"||r.r==="join")&&Date.now()-r.t<LOST)return r;clearSess();return null}
+function sessPhrase(r){if(r.q){const e=pairs().find(x=>x.i===r.q);return e?PAIR+e.k:null}return typeof r.p==="string"&&r.p?r.p:null}
+function clearRx(rm){const p=getJ("ld.rx");delJ("ld.rx");delJ("ld.rxo");if(rm&&p&&p.nm&&HAS_OPFS)work({op:"rm",nm:p.nm}).catch(()=>{})}
+
+function reset(keep){
   stopScan();clearTimeout(timer);clearInterval(retry);clearInterval(hb);ep++;
-  try{conn&&conn.close()}catch{}try{peer&&peer.destroy()}catch{}
+  try{conn&&conn.close()}catch{}try{opc&&opc.close()}catch{}try{peer&&peer.destroy()}catch{}
   try{wl&&wl.release()}catch{}
   try{cur&&cur.w&&cur.w.abort().catch(()=>{})}catch{}
   if((rx&&rx.z)||(cur&&cur.o))work({op:"drop"}).catch(()=>{});
   reconWait&&reconWait.rej(new Error(tr("The session ended.")));
   decRes&&decRes(false);
-  conn=peer=waiter=cur=rx=job=wl=dir=role=tid=sid=authKey=reconWait=stWait=null;pending=[];lock=busy=lost=up=trying=ackOK=false;
-  $("list").innerHTML="";$("pA").hidden=true;setBanner();$("auto").checked=false;view("vHome")}
+  if(!keep){clearSess();clearRx(true);delJ("ld.job")}
+  conn=peer=waiter=cur=rx=job=wl=dir=role=tid=sid=authKey=reconWait=stWait=code=pairId=rj=opc=pairReq=pendKey=null;peerName="";pending=[];lock=busy=lost=up=trying=ackOK=offline=false;
+  clearGal();
+  $("list").innerHTML="";$("pA").hidden=$("pP").hidden=$("pJ").hidden=true;$("pairb").hidden=false;setBanner();$("auto").checked=false;view("vHome");renderHome()}
 const fail=m=>{reset();say(m,true)};
 
 // <auth>
@@ -345,82 +436,115 @@ async function pairOf(c){
   return null;
 }
 async function check(c){
-  const p=await pairOf(c);
+  const p=await pairOf(c),strict=mode==="lan"||offline;
   if(!p){
-    if(mode==="any"){routeKey="Direct connection";return true}
+    if(!strict){routeKey="Direct connection";return true}
     fail(tr("The connection type could not be determined. Please try again."));return false}
   const [l,r]=p,ty=x=>x.candidateType==="host"||x.candidateType==="prflx";
   const local=ty(l)&&ty(r)&&onLink(l,r);
-  if(mode==="lan"&&!local){
+  if(strict&&!local){
     fail(tr("This connection is not on your local network. Connect both devices to the same Wi-Fi network, or select Internet. (Details: {0} to {1})",desc(l),desc(r)));return false}
   routeKey=local?"Local network":"Internet, direct connection";return true;
 }
 
 // ---------- Session setup ----------
-async function host(custom){
-  reset();view("vHost");say("");holdAwake();
-  $("ownrow").hidden=true;$("ownin").value="";$("ownmsg").textContent="";
-  const phrase=canon(custom||gen());$("phrase").textContent=phrase;
-  hostLink=location.origin+location.pathname+"#j="+encodeURIComponent(phrase)+"&m="+mode;
-  try{const qr=qrcode(0,"M");qr.addData(hostLink);qr.make();$("qr").src=qr.createDataURL(5,4);$("qr").hidden=false}catch{$("qr").hidden=true}
-  role="host";sid=hex(crypto.getRandomValues(new Uint8Array(16)));
-  const p=peer=new Peer(await pid(phrase),{config:cfg()});
-  p.on("error",e=>{if(!lock)fail(tr("The connection service is unavailable ({0}). Please try again.",e.type))});
-  p.on("disconnected",()=>setTimeout(()=>{try{if(peer===p&&!p.destroyed)p.reconnect()}catch{}},2000));
-  p.on("connection",c=>{
-    if(lost){ // only the original joiner may resume: it must prove it knows the phrase, then present the session key
-      let ok=false,authed=false;
-      c.on("open",async()=>{if(await handshake(c))authed=true;else c.close()});
-      c.on("data",d=>{
-        if(ok)return onData(d);
-        let m;try{m=JSON.parse(d)}catch{}
-        if(m&&m.t==="auth")return;
-        if(authed&&lost&&m&&m.t==="resume"&&m.s===sid){ok=true;c.send(JSON.stringify({t:"resumed"}));c.on("close",()=>gone(c));resumed(c)}
-        else c.close();
-      });
-      return}
-    if(lock){c.close();return}
-    lock=true;conn=c;c.on("data",onData);c.on("close",()=>gone(c));
-    c.on("open",()=>established(c));
-  });
-  timer=setTimeout(()=>{if(!lock)fail(tr("The session code expired. Start a new session."))},TTL);
+async function host(custom,o){
+  o=o||{};const R=o.resume,P=o.pair;
+  if(!o.pre)reset(!!R);
+  view(R?"vLive":P?"vWait":"vHost");say("");holdAwake();
+  let phrase;
+  if(R){phrase=sessPhrase(R);if(!phrase)return fail(tr("Could not reconnect. Start a new session."))}
+  else if(P){phrase=PAIR+P.k;peerName=P.n||"";waitUi()}
+  else{
+    $("ownrow").hidden=true;$("ownin").value="";$("ownmsg").textContent="";
+    phrase=canon(custom||gen());$("phrase").textContent=phrase;
+    hostLink=location.origin+location.pathname+"#j="+encodeURIComponent(phrase)+"&m="+mode;
+    try{const qr=qrcode(0,"M");qr.addData(hostLink);qr.make();$("qr").src=qr.createDataURL(5,4);$("qr").hidden=false}catch{$("qr").hidden=true}}
+  code=phrase;role="host";sid=R?R.s:hex(crypto.getRandomValues(new Uint8Array(16)));
+  if(P)pairId=P.i;
+  if(R){ // a reloaded host: wait for the joiner to come back with the session key
+    pairId=R.q||null;peerName=R.n||"";lock=up=lost=true;renderLive();$("pairb").hidden=!!pairId;
+    setBanner("Connection lost. Waiting for the other device to reconnect…");
+    timer=setTimeout(()=>fail(tr("Could not reconnect. Start a new session.")),LOST);retry=setInterval(kick,3000)}
+  const id=await pid(phrase),retr=!!(R||P);let tries=0;
+  // A paired or resumed code may still be registered for a moment after a reload, so registration is retried.
+  const start=()=>{
+    const p=peer=new Peer(id,{config:cfg()});
+    p.on("error",e=>{
+      if(peer!==p)return;
+      if(e.type==="unavailable-id"&&retr&&tries++<40){try{p.destroy()}catch{}setTimeout(()=>{if(peer===p)start()},3000);return}
+      if(!lock)fail(tr("The connection service is unavailable ({0}). Please try again.",e.type))});
+    p.on("disconnected",()=>setTimeout(()=>{try{if(peer===p&&!p.destroyed)p.reconnect()}catch{}},2000));
+    p.on("connection",c=>{
+      if(lost){ // only the original joiner may resume: it must prove it knows the phrase, then present the session key
+        let ok=false,authed=false;
+        c.on("open",async()=>{if(await handshake(c))authed=true;else c.close()});
+        c.on("data",d=>{
+          if(ok)return onData(d);
+          let m;try{m=JSON.parse(d)}catch{}
+          if(m&&m.t==="auth")return;
+          if(authed&&lost&&m&&m.t==="resume"&&m.s===sid){ok=true;c.send(JSON.stringify({t:"resumed"}));c.on("close",()=>gone(c));resumed(c)}
+          else c.close();
+        });
+        return}
+      if(lock){c.close();return}
+      lock=true;conn=c;c.on("data",onData);c.on("close",()=>gone(c));
+      c.on("open",()=>established(c));
+    });
+  };
+  start();
+  if(!R)timer=setTimeout(()=>{if(!lock)fail(tr(P?"Nobody connected. Open Direct Drop on both devices and try again.":"The session code expired. Start a new session."))},TTL);
 }
+function waitUi(){const n=tr(peerName||"Other device");$("waitT").textContent=tr("Connecting to {0}",n);$("waitM").textContent=tr("Open Direct Drop on {0} and tap Connect there too. Both devices must use the same connection type.",n)}
 function gen(){const r=new Uint32Array(5);crypto.getRandomValues(r);
   return [0,1,2,3].map(i=>WORDS[r[i]%WORDS.length]).join("-")+"-"+(10+r[4]%90)}
 
-async function join(){
-  const phrase=canon($("inp").value);if(!phrase)return;
-  reset();view("vJoin");say(tr("Connecting…"));role="join";tid=await pid(phrase);holdAwake();
-  peer=new Peer({config:cfg()});
-  peer.on("error",e=>{
-    if(up||lost)return; // signaling hiccups after connecting do not matter
-    clearTimeout(timer);view("vJoin");
-    say(e.type==="peer-unavailable"?tr("No session was found for this code. Check the code, or start a new session on the other device."):tr("The connection service is unavailable ({0}). Please try again.",e.type),true)});
-  peer.on("open",()=>{
-    const c=conn=peer.connect(tid,{serialization:"raw",reliable:true});
+async function join(o){
+  o=o&&o.pair||o&&o.resume?o:{};const R=o.resume,P=o.pair;
+  const phrase=R?sessPhrase(R):P?PAIR+P.k:canon($("inp").value);
+  if(!phrase){if(R)fail(tr("Could not reconnect. Start a new session."));return}
+  if(!o.pre)reset(!!R);
+  role="join";code=phrase;
+  if(R){ // a reloaded joiner: keep trying to rejoin with the session key
+    pairId=R.q||null;sid=R.s;peerName=R.n||"";tid=await pid(phrase);holdAwake();up=lost=true;renderLive();$("pairb").hidden=!!pairId;view("vLive");
+    setBanner("Connection lost. Reconnecting…");timer=setTimeout(()=>fail(tr("Could not reconnect. Start a new session.")),LOST);retry=setInterval(kick,3000);kick();return}
+  if(P){pairId=P.i;peerName=P.n||"";view("vWait");say("");waitUi()}else{view("vJoin");say(tr("Connecting…"))}
+  tid=await pid(phrase);holdAwake();
+  const dl=Date.now()+TTL,p=peer=new Peer({config:cfg()});
+  const go=()=>{
+    if(peer!==p||up)return;
+    const c=conn=p.connect(tid,{serialization:"raw",reliable:true});
     c.on("data",onData);c.on("close",()=>gone(c));
     c.on("open",()=>{clearTimeout(timer);established(c)});
-  });
-  timer=setTimeout(()=>{reset();view("vJoin");say(tr("The connection timed out. Check that both devices use the same code and connection type."),true)},25000);
+  };
+  p.on("error",e=>{
+    if(peer!==p||up||lost)return; // signaling hiccups after connecting do not matter
+    if(P&&e.type==="peer-unavailable"&&Date.now()<dl){const c=conn;conn=null;try{c&&c.close()}catch{}setTimeout(go,3000);return} // the other device is not ready yet
+    clearTimeout(timer);view("vJoin");
+    say(e.type==="peer-unavailable"?tr("No session was found for this code. Check the code, or start a new session on the other device."):tr("The connection service is unavailable ({0}). Please try again.",e.type),true)});
+  p.on("open",go);
+  timer=setTimeout(()=>{reset();if(P)say(tr("Nobody connected. Open Direct Drop on both devices and try again."),true);else{view("vJoin");say(tr("The connection timed out. Check that both devices use the same code and connection type."),true)}},P?TTL:25000);
 }
 
 async function established(c){
-  const hs=handshake(c);
+  const hs=offline?true:handshake(c); // offline sessions are verified by the QR codes themselves
   if(!await check(c))return;
   if(!await hs){fail(tr("The other device could not be verified. The session code may be incorrect, or the connection may have been tampered with. Start a new session."));return}
   c.send(JSON.stringify({t:"hello",n:devName(),s:role==="host"?sid:undefined,k:1,v:VERSION}));
-  cg++;up=true;beat();say("");renderLive();view("vLive");holdAwake();
+  cg++;up=true;beat();say("");$("pairb").hidden=!!pairId;renderLive();view("vLive");holdAwake();saveSess();
 }
 
 // ---------- Reconnection ----------
-// The session stays open for 2 minutes. The host keeps its code registered; the joiner retries
+// The session stays open for 10 minutes. The host keeps its code registered; the joiner retries
 // every few seconds and proves it belongs to the session. Transfers continue where they stopped.
 const gone=c=>{
   if(!c||conn!==c)return;
   if(!up){reset();say(tr("The connection could not be established."),true);return}
   lose()};
 function lose(){
-  if(lost)return;lost=true;ep++; // handlers queued from the old connection are discarded
+  if(lost)return;
+  if(offline){fail(tr("The connection was lost. Start a new session."));return}
+  lost=true;ep++; // handlers queued from the old connection are discarded
   const old=conn;conn=null;clearInterval(hb);$("pA").hidden=true;
   decRes&&decRes(false);
   if(waiter){const w=waiter;waiter=null;w({t:"reject",lost:1})}
@@ -430,7 +554,7 @@ function lose(){
   if(job)job.row.set(null,w);
   if(role==="join"&&!sid)return fail(tr("The connection was lost. Start a new session."));
   setBanner(role==="join"?"Connection lost. Reconnecting…":"Connection lost. Waiting for the other device to reconnect…");
-  clearTimeout(timer);timer=setTimeout(()=>fail(tr("Could not reconnect. Start a new session.")),12e4);
+  clearTimeout(timer);timer=setTimeout(()=>fail(tr("Could not reconnect. Start a new session.")),LOST);
   clearInterval(retry);retry=setInterval(kick,3000);kick();
 }
 function kick(){
@@ -458,8 +582,11 @@ function attempt(){
 async function resumed(c){
   conn=c;
   if(!await check(c))return;
-  lost=false;cg++;clearInterval(retry);clearTimeout(timer);beat();setBanner();
+  lost=false;cg++;clearInterval(retry);clearTimeout(timer);beat();setBanner();$("pairb").hidden=!!pairId;
+  try{c.send(JSON.stringify({t:"hello",n:devName(),k:1,v:VERSION}))}catch{}
+  saveSess();
   if(rx)rx.row.set(null,tr("Connection restored. Resuming…"));
+  if(rj&&!job)showRj();
   reconWait&&reconWait.res();
 }
 // Both sides ping every 5 seconds; 15 seconds of silence counts as a lost connection.
@@ -468,6 +595,7 @@ function beat(){
   hb=setInterval(()=>{
     if(!conn||lost)return;
     try{conn.send(JSON.stringify({t:"ping"}))}catch{}
+    if(Date.now()-lastSave>3e4){lastSave=Date.now();saveSess()}
     if(Date.now()-seen>(document.hidden?12e4:15000))gone(conn);
   },5000);
 }
@@ -510,25 +638,26 @@ function addRow(txt,onCancel){
   $("list").prepend(li);
   const o={set(v,x,err){s.textContent=x;s.className=err?"e":"";p.hidden=v==null||v>=1;if(v!=null)p.value=v;if(cb)cb.hidden=!!err||(v!=null&&v>=1)}};
   o.set(null,txt);return o}
-function showText(x){
+function showText(x,sent){
   const li=document.createElement("li"),h=document.createElement("div"),p=document.createElement("div"),r=document.createElement("div");
-  h.className="m";h.textContent=tr("Text received");p.className="tx";p.textContent=x;r.className="row";
+  h.className="m";h.textContent=sent?tr("Text sent ({0} characters).",x.length):tr("Text received");p.className="tx";p.textContent=x;r.className="row";
   const b=document.createElement("button");b.textContent=tr("Copy");b.onclick=()=>copy(x,b);r.append(b);
   if(/^https?:\/\/\S+$/i.test(x.trim())){const o=document.createElement("button");o.textContent=tr("Open link");o.onclick=()=>window.open(x.trim(),"_blank","noopener,noreferrer");r.append(o)}
-  li.append(h,p,r);$("list").prepend(li);notifyDone(tr("Text received"))}
+  li.append(h,p,r);$("list").prepend(li);if(!sent)notifyDone(tr("Text received"))}
 function sendText(x){
   x=String(x||"");
   if(!x.trim()){say(tr("There is no text to send."),true);return false}
   if(x.length>20000){say(tr("The text is too long. The limit is {0} characters.",20000),true);return false}
   if(!conn||lost){say(tr("Not connected. Wait for the connection to be restored."),true);return false}
   try{conn.send(JSON.stringify({t:"text",x}))}catch{say(tr("Not connected. Wait for the connection to be restored."),true);return false}
-  say("");addRow(tr("Text sent ({0} characters).",x.length));return true}
+  say("");showText(x,true);return true}
 
 // Stops an incoming transfer and removes any partly written file.
 function discardRx(msg){
   if(!rx)return;
   try{cur&&cur.w&&cur.w.abort().catch(()=>{})}catch{}
   if(rx.z||(cur&&cur.o))work({op:"drop"}).catch(()=>{});
+  delJ("ld.rx");delJ("ld.rxo");
   rx.row.set(null,msg,true);rx=cur=null}
 const enq=f=>{const e=ep;q=q.then(()=>e===ep?f():0).catch(err=>{
   if(lost)return;
@@ -552,7 +681,7 @@ function onData(d){
   let m;try{m=JSON.parse(d)}catch{return}
   if(!m||typeof m!=="object")return;
   switch(m.t){
-    case"hello":peerName=clean(m.n,40)||peerName;peerVer=clean(m.v,20);if(m.s&&role==="join")sid=clean(m.s,64);ackOK=!!m.k;renderLive();break;
+    case"hello":peerName=clean(m.n,40)||peerName;peerVer=clean(m.v,20);if(m.s&&role==="join")sid=clean(m.s,64);ackOK=!!m.k;saveSess();renderLive();break;
     case"ping":case"auth":break;
     case"ack":{ackB=m.n;const w=ackWake;ackWake=null;w&&w();break}
     case"cancel":{cxl=true;cxlLocal=false;const w=ackWake;ackWake=null;w&&w();break}
@@ -560,6 +689,9 @@ function onData(d){
     case"accept":case"reject":{const w=waiter;waiter=null;w&&w(m);break}
     case"state":{const w=stWait;stWait=null;w&&w(m);break}
     case"done":if(job&&m.id===job.id){job.done=true;const w=job.doneRes;job.doneRes=null;w&&w()}break;
+    case"pairreq":if(typeof m.k==="string"&&/^[0-9a-f]{64}$/.test(m.k)&&!pairId){pendKey=m.k;$("pPt").textContent=tr("{0} wants to pair with this device. Paired devices connect with one tap.",pn());$("pP").hidden=false}break;
+    case"pairok":if(pairReq){const k=pairReq;pairReq=null;clearTimeout(pairTo);pairSave(k)}break;
+    case"pairno":if(pairReq){pairReq=null;clearTimeout(pairTo);$("pairb").hidden=false;say(tr("{0} declined to pair.",pn()),true)}break;
     case"bye":reset();say(tr("The other device ended the session."));break;
     case"text":if(typeof m.x==="string")showText(m.x.slice(0,20000));break;
     case"sync":run(()=>syncReply(m));break;
@@ -588,15 +720,19 @@ function zEnd(list,dt,start){
 // Browsers without folder access (iOS Safari, Firefox) write to private browser storage through a
 // worker instead of holding the whole file in memory, then hand the finished file to the download.
 const WSRC=`let h,fh,nm,o=0,k=0;onmessage=async e=>{const m=e.data;try{
-if(m.op==="open"){const r=await navigator.storage.getDirectory();nm="ld-"+Date.now()+"-"+(k++);fh=await r.getFileHandle(nm,{create:true});h=await fh.createSyncAccessHandle();h.truncate(0);o=0;postMessage({})}
+if(m.op==="open"){const r=await navigator.storage.getDirectory();nm="ld-"+Date.now()+"-"+(k++);fh=await r.getFileHandle(nm,{create:true});h=await fh.createSyncAccessHandle();h.truncate(0);o=0;postMessage({nm})}
+else if(m.op==="reopen"){const r=await navigator.storage.getDirectory();nm=m.nm;fh=await r.getFileHandle(nm);h=await fh.createSyncAccessHandle();if(h.getSize()<m.at)throw new Error("short");h.truncate(m.at);o=m.at;postMessage({nm})}
 else if(m.op==="write"){const u=new Uint8Array(m.buf);h.write(u,{at:o});o+=u.byteLength;postMessage({})}
-else if(m.op==="close"){h.flush();h.close();h=null;postMessage({file:await fh.getFile()})}
-else if(m.op==="drop"){try{h&&h.close()}catch(_){}try{const r=await navigator.storage.getDirectory();await r.removeEntry(nm)}catch(_){}postMessage({})}
+else if(m.op==="flush"){h.flush();postMessage({})}
+else if(m.op==="close"){h.flush();h.close();h=null;postMessage({file:await fh.getFile(),nm})}
+else if(m.op==="drop"){try{h&&h.close()}catch(_){}h=null;try{const r=await navigator.storage.getDirectory();await r.removeEntry(nm)}catch(_){}postMessage({})}
+else if(m.op==="rm"){try{const r=await navigator.storage.getDirectory();await r.removeEntry(m.nm)}catch(_){}postMessage({})}
 }catch(x){postMessage({err:String(x&&x.message||x)})}}`;
-const work=(m,t)=>new Promise((res,rej)=>{
+// Calls to the worker run one after another, so replies can never get mixed up.
+const work=(m,t)=>{const p=wq.then(()=>new Promise((res,rej)=>{
   wk=wk||new Worker(URL.createObjectURL(new Blob([WSRC],{type:"text/javascript"})));
   wk.onmessage=e=>e.data.err?rej(new Error(e.data.err)):res(e.data);
-  wk.postMessage(m,t||[])});
+  wk.postMessage(m,t||[])}));wq=p.catch(()=>{});return p};
 function save(f,name){const a=document.createElement("a");a.href=URL.createObjectURL(f);a.download=safe(name);a.click();setTimeout(()=>URL.revokeObjectURL(a.href),36e5)}
 
 // ---------- Receiving ----------
@@ -634,10 +770,10 @@ async function handle(m){
     if(!conn)return;
     conn.send(JSON.stringify({t:ok?"accept":"reject"}));
     if(!ok)return;
-    rx={id:m.id,n:0,count:files.length,total,files,got:0,acked:0,row:addRow(tr("Receiving {0}…",plural(files.length)),cancelIn)};
+    rx={id:m.id,n:0,count:files.length,total,files,got:0,acked:0,row:addRow(tr("Receiving {0}…",plural(files.length)),cancelIn)};lastP=0;
     const hasPath=files.some(f=>f.name.includes("/"));
     if(!dir&&HAS_OPFS&&(hasPath||($("zip").checked&&files.length>1))&&total<3.9e9&&files.length<65000){
-      try{await work({op:"open"});rx.z={list:[],off:0,names:new Set(),dt:dosTime(new Date())}}catch{}}
+      try{const op=await work({op:"open"});wnm=op.nm;rx.z={list:[],off:0,names:new Set(),dt:dosTime(new Date())};setJ("ld.rxo",{id:rx.id,files:rx.files,total:rx.total})}catch{}}
   }else if(m.t==="file"&&rx&&m.id===rx.id){
     if(m.i!==rx.n||!Number.isInteger(m.off))throw bad();
     if(cur){if(m.off!==cur.got)throw bad();return} // the file in progress continues where it stopped
@@ -649,20 +785,20 @@ async function handle(m){
       for(let i=1;rx.z.names.has(nm);i++)nm=base.replace(/(\.[^.]*)?$/,` (${i})$1`);
       rx.z.names.add(nm);cur.zname=nm;cur.zoff=rx.z.off;
       const h=zLocal(nm,rx.z.dt);rx.z.off+=h.length;await work({op:"write",buf:h.buffer},[h.buffer]);
-    }else if(dir){const d=await openLeaf(dir,parts);cur.w=await(await d.getFileHandle(await freeName(d,leaf),{create:true})).createWritable()}
-    else if(HAS_OPFS){try{await work({op:"open"});cur.o=true}catch{}}
+    }else if(dir){const d=await openLeaf(dir,parts),fh=await d.getFileHandle(await freeName(d,leaf),{create:true});cur.fh=fh;cur.w=await fh.createWritable()}
+    else if(HAS_OPFS){try{const op=await work({op:"open"});wnm=op.nm;cur.o=true;setJ("ld.rxo",{id:rx.id,files:rx.files,total:rx.total})}catch{}}
     if(!rx.z&&!cur.w&&!cur.o&&f.size>MEMLIM)throw new Error(tr("This browser cannot store a file this large."));
   }else if(m.t==="end"&&cur&&rx&&m.id===rx.id){
     if(cur.got!==cur.size)throw new Error(tr("The received size of {0} did not match the offer.",cur.name));
     if(rx.z){const d=zDesc(cur.crc,cur.size);rx.z.off+=d.length;rx.z.list.push({name:cur.zname,crc:cur.crc,size:cur.size,off:cur.zoff});await work({op:"write",buf:d.buffer},[d.buffer])}
-    else if(cur.w)await cur.w.close();
-    else save(cur.o?(await work({op:"close"})).file:new Blob(cur.buf),cur.name);
+    else if(cur.w){await cur.w.close();if(isImg(cur.name))try{addGal(cur.name,await cur.fh.getFile(),"in")}catch{}}
+    else{const f=cur.o?(await work({op:"close"})).file:new Blob(cur.buf);save(f,cur.name);if(isImg(cur.name))addGal(cur.name,f,"in")}
     cur=null;rx.n++;
     if(rx.n===rx.count){
       if(rx.z){const e=zEnd(rx.z.list,rx.z.dt,rx.z.off);await work({op:"write",buf:e.buffer},[e.buffer]);
-        save((await work({op:"close"})).file,"DirectDrop-"+new Date().toISOString().slice(0,19).replace(/[-:T]/g,"")+".zip")}
+        const zf=(await work({op:"close"})).file;save(zf,"DirectDrop-"+new Date().toISOString().slice(0,19).replace(/[-:T]/g,"")+".zip");galZip(zf,rx.z.list)}
       rx.row.set(1,tr(rx.z?"Received {0} ({1}) as one ZIP file.":dir?"Received {0} ({1}) and saved to your folder.":"Received {0} ({1}).",plural(rx.count),fmt(rx.total)));
-      doneId=rx.id;try{conn.send(JSON.stringify({t:"done",id:rx.id}))}catch{}rx=null;notifyDone(tr("Transfer complete"));
+      doneId=rx.id;delJ("ld.rx");delJ("ld.rxo");try{conn.send(JSON.stringify({t:"done",id:rx.id}))}catch{}rx=null;notifyDone(tr("Transfer complete"));
     }
   }
 }
@@ -676,7 +812,29 @@ async function chunk(d){
   // Tell the sender how much has been written so it never runs far ahead of this device.
   if(rx.got-rx.acked>=ACK){rx.acked=rx.got;try{conn.send(JSON.stringify({t:"ack",n:rx.got}))}catch{}}
   rx.row.set(rx.got/(rx.total||1),tr("Receiving {0} ({1} of {2}): {3}%",cur.name,rx.n+1,rx.count,Math.round(rx.got/(rx.total||1)*100)));
+  await persist();
 }
+// Only data held in browser storage can be continued after a reload. The position is saved at most every 1.5 seconds,
+// and only after the data up to that position has been flushed, so the saved position is always safe to continue from.
+async function persist(){
+  if(!rx||!cur||!(rx.z||cur.o))return;
+  const t=Date.now();if(t-lastP<1500)return;lastP=t;
+  try{
+    await work({op:"flush"});
+    const p={id:rx.id,n:rx.n,got:rx.got,nm:wnm,t,c:{got:cur.got,crc:cur.crc,zname:cur.zname,zoff:cur.zoff}};
+    if(rx.z)p.z={l:rx.z.list.map(e=>[e.name,e.crc,e.size,e.off]),off:rx.z.off,dt:rx.z.dt};
+    setJ("ld.rx",p)}catch{}}
+async function restoreRx(){
+  const o=getJ("ld.rxo"),p=getJ("ld.rx");
+  if(!o||!p||o.id!==p.id||!HAS_OPFS||!Array.isArray(o.files)||Date.now()-p.t>LOST){clearRx(true);return}
+  try{
+    await work({op:"reopen",nm:p.nm,at:p.z?p.z.off:p.c?p.c.got:0});wnm=p.nm;
+    const f=o.files[p.n],r={id:o.id,n:p.n,count:o.files.length,total:o.total,files:o.files,got:p.got,acked:p.got,row:addRow(tr("Connection lost. Waiting to resume…"),cancelIn)};
+    let c=null;
+    if(p.z)r.z={list:p.z.l.map(([name,crc,size,off])=>({name,crc,size,off})),off:p.z.off,names:new Set(p.z.l.map(e=>e[0])),dt:p.z.dt};
+    if(p.c){const parts=cleanPath(f.name);c={name:parts[parts.length-1],size:f.size,i:p.n,got:p.c.got,crc:p.c.crc||0,w:null,o:!p.z,buf:[],zname:p.c.zname,zoff:p.c.zoff};if(p.z)r.z.names.add(p.c.zname)}
+    rx=r;cur=c;lastP=0
+  }catch{clearRx(true)}}
 // After a reconnect the sender asks where we stopped, so it can continue from there.
 function syncReply(m){
   const ok=rx&&rx.id===m.id;
@@ -701,11 +859,11 @@ async function resync(j){
     throw new Error(tr("The other device no longer has this transfer. Send the files again."))}
   j.i=st.n;j.o=st.got;sentB=ackB=st.tot;j.base=st.tot;j.t0=performance.now();cxl=false}
 
-async function pump(j){
-  let wait=false,g=cg; // g: the connection generation this attempt started on
+async function pump(j,resume){
+  let wait=false,g=cg,skip=!!resume; // g: the connection generation this attempt started on
   for(;;){
     try{
-      if(wait){await waitReconnect(g);await resync(j);wait=false;g=cg}
+      if(wait||skip){if(!skip)await waitReconnect(g);skip=false;await resync(j);wait=false;g=cg}
       const c=conn;if(!c||lost)throw lostErr();
       const dc=c.dataChannel;dc.bufferedAmountLowThreshold=BIG;
       const snd=x=>{try{c.send(x)}catch{throw lostErr()}};
@@ -735,6 +893,7 @@ async function pump(j){
 
 async function sendFiles(list){
   if(!list.length)return;
+  if(rj)return resumeSend(list);
   if(busy){pending.push(list);say(tr("Added to the queue. It will start when the current transfer finishes."));return}
   if(!conn||lost){say(tr("Not connected. Wait for the connection to be restored."),true);return}
   const fs=items(list).map(x=>({f:x.f,p:x.p,size:x.f.size}));
@@ -751,9 +910,11 @@ async function sendFiles(list){
     if(a.lost){row.set(null,tr("The connection was lost."),true);return}
     if(a.t!=="accept"){row.set(null,tr("{0} declined the transfer.",pn()),true);return}
     sentB=ackB=0;cxl=false;cxlLocal=false;job.t0=performance.now();
+    setJ("ld.job",{id:offer.id,files:offer.files}); // kept so the files can be selected again after a reload
     await pump(job);
-    row.set(1,tr("Sent {0} ({1}).",plural(fs.length),fmt(total)));notifyDone(tr("Transfer complete"));
-  }catch(e){row.set(null,e.canceled?e.message:tr("Transfer failed: {0}",e.message),true);if(e.canceled)pending=[]}
+    row.set(1,tr("Sent {0} ({1}).",plural(fs.length),fmt(total)));notifyDone(tr("Transfer complete"));delJ("ld.job");
+    for(const x of fs)if(isImg(x.p))addGal(x.p.split("/").pop(),x.f,"out");
+  }catch(e){row.set(null,e.canceled?e.message:tr("Transfer failed: {0}",e.message),true);delJ("ld.job");if(e.canceled)pending=[]}
   finally{busy=false;job=null;if(pending.length&&conn&&!lost)setTimeout(()=>sendFiles(pending.shift()),0)}
 }
 
@@ -765,9 +926,190 @@ async function readEntry(e,path,out){
     for(;;){const b=await new Promise((res,rej)=>r.readEntries(res,rej));if(!b.length)break;for(const c of b)await readEntry(c,path+e.name+"/",out)}}
 }
 
+// ---------- Photos: thumbnails and Save all ----------
+const IMG=/\.(jpe?g|png|gif|webp|avif|bmp|heic|heif)$/i,MIME={jpg:"image/jpeg",jpeg:"image/jpeg",png:"image/png",gif:"image/gif",webp:"image/webp",avif:"image/avif",bmp:"image/bmp",heic:"image/heic",heif:"image/heif"};
+const isImg=n=>IMG.test(n),mime=n=>MIME[(String(n).split(".").pop()||"").toLowerCase()]||"application/octet-stream";
+const badge=d=>{const b=document.createElement("b");b.textContent=d==="in"?"↓":"↑";return b};
+function renderGal(){$("gal").hidden=!gal.length;$("sall").hidden=HAS_DIR||!CAN_SHARE||!gal.some(g=>g.d==="in")}
+function clearGal(){gal=[];thumbQ.length=0;$("thumbs").textContent="";renderGal()}
+function addGal(name,b,d){
+  if(gal.length>=1000){const o=gal.shift();o.a.remove()}
+  const g={n:name,b,d},a=document.createElement("a");
+  a.href="#";a.title=name;a.textContent=name;a.append(badge(d));
+  a.onclick=e=>{e.preventDefault();const u=URL.createObjectURL(b);window.open(u,"_blank","noopener");setTimeout(()=>URL.revokeObjectURL(u),3e5)};
+  g.a=a;gal.push(g);$("thumbs").append(a);renderGal();thumbQ.push(g);runThumbs()}
+// Photos inside the finished ZIP are stored uncompressed, so each one can be cut out of the ZIP file.
+function galZip(zf,list){for(const e of list){const leaf=e.name.split("/").pop();if(!isImg(leaf))continue;const st=e.off+30+new TextEncoder().encode(e.name).length;addGal(leaf,zf.slice(st,st+e.size,mime(leaf)),"in")}}
+// Thumbnails are made one at a time so a large batch of photos never needs much memory.
+async function mkThumb(b){
+  if(typeof Image==="undefined")return null;
+  const u=URL.createObjectURL(b);
+  try{const im=new Image();im.src=u;await im.decode();
+    const k=Math.min(1,160/Math.max(im.naturalWidth,im.naturalHeight)),c=document.createElement("canvas");
+    c.width=Math.max(1,Math.round(im.naturalWidth*k));c.height=Math.max(1,Math.round(im.naturalHeight*k));
+    c.getContext("2d").drawImage(im,0,0,c.width,c.height);return c.toDataURL("image/jpeg",.7)}
+  catch{return null}finally{URL.revokeObjectURL(u)}}
+async function runThumbs(){
+  if(thumbBusy)return;thumbBusy=true;
+  while(thumbQ.length){const g=thumbQ.shift(),u=await mkThumb(g.b);
+    if(u&&gal.includes(g)){const im=document.createElement("img");im.alt=g.n;im.src=u;g.a.textContent="";g.a.append(im,badge(g.d))}}
+  thumbBusy=false}
+// On iPhone and iPad the share sheet offers "Save Images", which puts the photos in the Photos app.
+async function saveAll(){
+  const l=gal.filter(g=>g.d==="in");if(!l.length)return;
+  try{
+    const fs=l.map(g=>new File([g.b],safe(g.n),{type:mime(g.n)}));
+    if(navigator.canShare&&navigator.canShare({files:fs})){await navigator.share({files:fs});return}
+  }catch(e){if(e&&e.name==="AbortError")return;say(tr("Photos could not be saved. Try again."),true);return}
+  for(const g of l){save(g.b,g.n);await new Promise(r=>setTimeout(r,400))}}
+
+// ---------- Paired devices ----------
+function renderHome(){
+  const ps=pairs(),l=$("pairlist");
+  $("pairbox").hidden=!ps.length;l.textContent="";
+  for(const e of ps){
+    const r=document.createElement("div"),n=document.createElement("span"),g=document.createElement("span"),c=document.createElement("button"),f=document.createElement("button");
+    r.className="pr";n.textContent=tr(e.n||"Other device");
+    c.className="p";c.textContent=tr("Connect");c.onclick=()=>pairGo(e.i);
+    f.className="link";f.textContent=tr("Forget");f.onclick=()=>{setJ("ld.pairs",pairs().filter(x=>x.i!==e.i));renderHome()};
+    g.append(c," ",f);r.append(n,g);l.append(r)}
+  const s=loadSess();$("resbox").hidden=!s;
+  if(s)$("restxt").textContent=tr("The session with {0} was interrupted. Resume it to continue.",tr(s.n||"Other device"))}
+function pairGo(i){const e=pairs().find(x=>x.i===i);if(!e)return;e.s==="a"?host(null,{pair:e}):join({pair:e})}
+// The device that started the session listens (a); the device that joined connects to it (b).
+function pairAsk(){
+  if(!conn||lost||pairId)return;
+  const k=hex(crypto.getRandomValues(new Uint8Array(32)));
+  try{conn.send(JSON.stringify({t:"pairreq",k}))}catch{return}
+  pairReq=k;$("pairb").hidden=true;clearTimeout(pairTo);pairTo=setTimeout(()=>{pairReq=null;if(up&&!pairId)$("pairb").hidden=false},6e4)}
+function pairSave(k){
+  const a=pairs().filter(x=>x.k!==k);
+  a.unshift({i:hex(crypto.getRandomValues(new Uint8Array(4))),k,s:role==="host"?"a":"b",n:peerName||"Other device",t:Date.now()});
+  setJ("ld.pairs",a.slice(0,10));renderHome();$("pairb").hidden=true;say(tr("Paired with {0}.",pn()))}
+
+// ---------- Resume after a reload ----------
+async function resumeSess(){
+  const r=loadSess();if(!r){renderHome();return}
+  if(r.m==="lan"||r.m==="any")setMode(r.m);
+  reset(true);
+  const j=getJ("ld.job");rj=j&&Array.isArray(j.files)?j:null;
+  await restoreRx();
+  await(r.r==="host"?host(null,{resume:r,pre:true}):join({resume:r,pre:true}))}
+function showRj(){
+  if(!rj)return;
+  $("pJt").textContent=tr("Select the same files to continue the interrupted transfer: {0} ({1}).",plural(rj.files.length),fmt(rj.files.reduce((a,f)=>a+f.size,0)));$("pJ").hidden=false}
+// The files are picked again, matched by path and size, and sending continues where the receiver stopped.
+async function resumeSend(list){
+  const r=rj,fs=items(list).map(x=>({f:x.f,p:x.p,size:x.f.size}));
+  const by=new Map(fs.map(x=>[x.p+"\n"+x.size,x])),ord=r.files.map(f=>by.get(f.name+"\n"+f.size));
+  if(ord.length!==fs.length||ord.some(x=>!x)){say(tr("These files do not match the interrupted transfer. Select the same files."),true);return}
+  if(!conn||lost){say(tr("Not connected. Wait for the connection to be restored."),true);return}
+  rj=null;$("pJ").hidden=true;say("");busy=true;
+  const total=ord.reduce((a,x)=>a+x.size,0)||1,row=addRow(tr("Connection restored. Resuming…"),cancelOut);
+  job={id:r.id,fs:ord,total,i:0,o:0,row,t0:performance.now(),base:0};sentB=ackB=0;cxl=false;cxlLocal=false;
+  try{
+    await pump(job,true);
+    row.set(1,tr("Sent {0} ({1}).",plural(ord.length),fmt(total)));notifyDone(tr("Transfer complete"));
+    for(const x of ord)if(isImg(x.p))addGal(x.p.split("/").pop(),x.f,"out")
+  }catch(e){row.set(null,e.canceled?e.message:tr("Transfer failed: {0}",e.message),true);if(e.canceled)pending=[]}
+  finally{delJ("ld.job");busy=false;job=null;if(pending.length&&conn&&!lost)setTimeout(()=>sendFiles(pending.shift()),0)}}
+
+// ---------- Connect without internet: two QR codes replace the connection service ----------
+// <off>
+// A connection offer or answer is squeezed into a short text for a QR code, then rebuilt into a session description.
+const b64=u=>btoa(String.fromCharCode(...u)).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");
+const unb64=s=>Uint8Array.from(atob(s.replace(/-/g,"+").replace(/_/g,"/")),c=>c.charCodeAt(0));
+function packSdp(sdp,type){
+  const L=sdp.split(/\r?\n/),g=p=>{const l=L.find(x=>x.startsWith(p));return l?l.slice(p.length).trim():""};
+  const fp=g("a=fingerprint:sha-256 ").split(":").map(x=>parseInt(x,16)),cs=[];
+  for(const l of L)if(l.startsWith("a=candidate:")){const f=l.slice(12).split(" ");
+    if(f[1]==="1"&&String(f[2]).toLowerCase()==="udp"&&f[6]==="typ"&&f[7]==="host"&&!/^fe80/i.test(f[4]))cs.push([f[0],+f[3],f[4],+f[5]])}
+  cs.sort((a,b)=>(a[2].includes(":")?1:0)-(b[2].includes(":")?1:0));
+  const u=g("a=ice-ufrag:"),p=g("a=ice-pwd:"),s={actpass:"a",active:"c",passive:"p"}[g("a=setup:")];
+  if(fp.length!==32||fp.some(x=>!(x>=0&&x<256))||!u||!p||!s||!cs.length)return null;
+  return JSON.stringify(["dd1",type,u,p,b64(Uint8Array.from(fp)),s,cs.slice(0,4)])}
+// The text comes from a QR code, so every part is checked before it is placed in a session description.
+function unpackSdp(text){
+  let d;try{d=JSON.parse(text)}catch{return null}
+  if(!Array.isArray(d)||d[0]!=="dd1"||d.length!==7)return null;
+  const [,t,u,p,f,s,cs]=d,S={a:"actpass",c:"active",p:"passive"};
+  if(t!=="o"&&t!=="a")return null;
+  if(typeof u!=="string"||typeof p!=="string"||!/^[A-Za-z0-9+\/]{4,256}$/.test(u)||!/^[A-Za-z0-9+\/]{22,256}$/.test(p)||!S[s]||!Array.isArray(cs)||!cs.length||cs.length>8)return null;
+  let fb;try{fb=unb64(String(f))}catch{return null}
+  if(fb.length!==32)return null;
+  const L=["v=0","o=- 1 1 IN IP4 127.0.0.1","s=-","t=0 0","a=group:BUNDLE 0","m=application 9 UDP/DTLS/SCTP webrtc-datachannel","c=IN IP4 0.0.0.0",
+    "a=ice-ufrag:"+u,"a=ice-pwd:"+p,"a=fingerprint:sha-256 "+[...fb].map(x=>x.toString(16).padStart(2,"0").toUpperCase()).join(":"),"a=setup:"+S[s],"a=mid:0","a=sctp-port:5000","a=max-message-size:262144"];
+  for(const c of cs){
+    if(!Array.isArray(c)||c.length!==4)return null;
+    const [fd,pr,ad,pt]=c;
+    if(typeof ad!=="string"||!/^[A-Za-z0-9]{1,32}$/.test(String(fd))||!Number.isInteger(pr)||pr<1||pr>4294967295||!/^[A-Za-z0-9.:\-]{1,255}$/.test(ad)||!Number.isInteger(pt)||pt<1||pt>65535)return null;
+    L.push("a=candidate:"+fd+" 1 udp "+pr+" "+ad+" "+pt+" typ host")}
+  return{type:t,sdp:L.join("\r\n")+"\r\n"}}
+// </off>
+const offView=x=>["offHome","offShow","offScan"].forEach(i=>$(i).hidden=i!==x);
+const gathered=(pc,ms)=>new Promise(res=>{
+  if(pc.iceGatheringState==="complete")return res();
+  const t=setTimeout(res,ms);
+  pc.addEventListener("icegatheringstatechange",()=>{if(pc.iceGatheringState==="complete"){clearTimeout(t);res()}})});
+// Gives a raw data channel the same small interface as a PeerJS connection, so the rest of the page works unchanged.
+function wrapConn(pc,dc){
+  const h={},c={peerConnection:pc,dataChannel:dc,on(e,f){(h[e]=h[e]||[]).push(f);return c},emit(e,x){(h[e]||[]).slice().forEach(f=>f(x))},send(x){dc.send(x)},close(){try{dc.close()}catch{}try{pc.close()}catch{}}};
+  dc.binaryType="arraybuffer";
+  dc.onmessage=e=>c.emit("data",e.data);dc.onclose=()=>c.emit("close");dc.onopen=()=>c.emit("open");
+  pc.addEventListener("connectionstatechange",()=>{if(pc.connectionState==="failed")c.emit("close")});
+  if(dc.readyState==="open")setTimeout(()=>c.emit("open"),0);
+  return c}
+const wire=c=>{c.on("data",onData);c.on("close",()=>gone(c));c.on("open",()=>{clearTimeout(timer);established(c)})};
+function offOpen(){reset();view("vOff");offView("offHome");say("")}
+function showQr(t,msg){
+  try{const q=qrcode(0,"L");q.addData(t);q.make();$("oqr").src=q.createDataURL(4,4)}catch{fail(tr("The connection could not be established."));return}
+  $("offT").textContent=msg;offView("offShow")}
+// Device 1: shows the offer, then scans the answer.
+async function offShowFirst(){
+  say("");
+  if(!window.RTCPeerConnection){reset();say(tr("This browser does not support connecting without internet."),true);return}
+  offline=true;role="host";
+  try{const st=await navigator.mediaDevices.getUserMedia({video:true});st.getTracks().forEach(x=>x.stop())}catch{} // camera access also lets browsers share real local addresses
+  try{
+    const pc=opc=new RTCPeerConnection({iceServers:[]}),c=wrapConn(pc,pc.createDataChannel("d"));conn=c;wire(c);
+    await pc.setLocalDescription(await pc.createOffer());await gathered(pc,4000);
+    const t=packSdp(pc.localDescription.sdp,"o");
+    if(!t){fail(tr("No local network address was found. Connect both devices to the same Wi-Fi network."));return}
+    $("offN").hidden=false;showQr(t,tr("Show this QR code to the other device, then tap Next."))
+  }catch{fail(tr("The connection could not be established."))}}
+function offNext(){offView("offScan");startScan(onAnswerScan,["offScan","ocam"])}
+function onAnswerScan(text){
+  const d=unpackSdp(text);
+  if(!d){say(tr("This QR code is not from Direct Drop."),true);return false}
+  if(d.type!=="a"){say(tr("This is not the QR code expected at this step. Follow the steps on both devices."),true);return false}
+  say("");offFinish(d);return true}
+async function offFinish(d){
+  try{await opc.setRemoteDescription({type:"answer",sdp:d.sdp});say(tr("Connecting…"));clearTimeout(timer);timer=setTimeout(()=>fail(tr("The connection could not be established.")),3e4)}
+  catch{fail(tr("The connection could not be established."))}}
+// Device 2: scans the offer, then shows the answer.
+function offScanFirst(){
+  if(!window.RTCPeerConnection){say(tr("This browser does not support connecting without internet."),true);return}
+  say("");offline=true;role="join";offView("offScan");startScan(onOfferScan,["offScan","ocam"])}
+function onOfferScan(text){
+  const d=unpackSdp(text);
+  if(!d){say(tr("This QR code is not from Direct Drop."),true);return false}
+  if(d.type!=="o"){say(tr("This is not the QR code expected at this step. Follow the steps on both devices."),true);return false}
+  say("");offAnswer(d);return true}
+async function offAnswer(d){
+  try{
+    const pc=opc=new RTCPeerConnection({iceServers:[]});
+    pc.ondatachannel=e=>{const c=wrapConn(pc,e.channel);conn=c;wire(c)};
+    await pc.setRemoteDescription({type:"offer",sdp:d.sdp});
+    await pc.setLocalDescription(await pc.createAnswer());await gathered(pc,4000);
+    const t=packSdp(pc.localDescription.sdp,"a");
+    if(!t){fail(tr("No local network address was found. Connect both devices to the same Wi-Fi network."));return}
+    $("offN").hidden=true;showQr(t,tr("Show this QR code to the other device. The connection starts when it is scanned."));
+    timer=setTimeout(()=>fail(tr("The connection could not be established.")),12e4)
+  }catch{fail(tr("The connection could not be established."))}}
+
 // ---------- Interface ----------
 // ---------- Scan a session QR code with the camera ----------
-let camStream,scanTimer,detector,scanBusy,scanCv;
+let camStream,scanTimer,detector,scanBusy,scanCv,scanIds=["scanbox","cam"];
 // <scan>
 // Accepts a session link (the code is in the part after #) or a bare session code.
 function parseScan(x){
@@ -778,13 +1120,14 @@ function parseScan(x){
 function stopScan(){
   clearInterval(scanTimer);scanTimer=null;
   try{camStream&&camStream.getTracks().forEach(t=>t.stop())}catch{}
-  camStream=null;$("scanbox").hidden=true;$("cam").srcObject=null}
-async function startScan(){
-  say("");
+  camStream=null;$(scanIds[0]).hidden=true;$(scanIds[1]).srcObject=null}
+// With a callback, the camera keeps running until the callback accepts the code (returns anything but false).
+async function startScan(cb,ids){
+  scanIds=ids||["scanbox","cam"];say("");
   if(!window.BarcodeDetector&&!window.jsQR){say(tr("QR code scanning is not available in this browser. Enter the code instead."),true);return}
   try{camStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:"environment"}},audio:false})}
   catch{say(tr("The camera could not be started. Allow camera access, or enter the code instead."),true);return}
-  const v=$("cam");v.srcObject=camStream;$("scanbox").hidden=false;
+  const v=$(scanIds[1]);v.srcObject=camStream;$(scanIds[0]).hidden=false;
   try{await v.play()}catch{}
   if(!detector&&window.BarcodeDetector){try{detector=new BarcodeDetector({formats:["qr_code"]})}catch{}}
   scanTimer=setInterval(async()=>{
@@ -800,6 +1143,7 @@ async function startScan(){
     }catch{}
     scanBusy=false;
     if(!text||!camStream)return;
+    if(cb){if(cb(text)!==false)stopScan();return}
     const sc=parseScan(text);stopScan();
     if(!sc){say(tr("This QR code is not a Direct Drop session code."),true);return}
     if(sc.m==="lan"||sc.m==="any")setMode(sc.m);
@@ -816,8 +1160,8 @@ $("ownok").onclick=()=>{
   if(v.length<10||/^(.)\1+$/.test(v)){$("ownmsg").textContent=tr("Use at least 10 characters. A longer code is safer.");$("ownmsg").className="m e";return}
   host(v)};
 $("bJ").onclick=()=>{reset();view("vJoin");$("inp").focus()};
-$("go").onclick=join;
-$("scan").onclick=startScan;
+$("go").onclick=()=>join();
+$("scan").onclick=()=>startScan();
 $("scanx").onclick=stopScan;
 $("inp").onkeydown=e=>{if(e.key==="Enter")join()};
 $("jx").onclick=()=>{reset();say("")};
@@ -830,6 +1174,15 @@ $("pickd").onclick=()=>$("fo").click();
 $("fi").onchange=e=>{sendFiles([...e.target.files]);e.target.value=""};
 $("fo").onchange=e=>{sendFiles([...e.target.files]);e.target.value=""};
 $("chg").onclick=pickDir;
+$("bO").onclick=offOpen;$("offA").onclick=offShowFirst;$("offB").onclick=offScanFirst;$("offN").onclick=offNext;
+$("offX").onclick=$("offC").onclick=$("offC2").onclick=$("wx").onclick=$("resx").onclick=()=>{reset();say("")};
+$("resgo").onclick=resumeSess;
+$("pairb").onclick=pairAsk;
+$("pyes").onclick=()=>{const k=pendKey;pendKey=null;$("pP").hidden=true;if(!k||!conn)return;pairSave(k);try{conn.send(JSON.stringify({t:"pairok"}))}catch{}};
+$("pno").onclick=()=>{pendKey=null;$("pP").hidden=true;try{conn&&conn.send(JSON.stringify({t:"pairno"}))}catch{}};
+$("jf").onclick=()=>$("fi").click();$("jd").onclick=()=>$("fo").click();
+$("js").onclick=()=>{rj=null;delJ("ld.job");$("pJ").hidden=true};
+$("sall").onclick=saveAll;$("gclr").onclick=clearGal;
 $("sendtxt").onclick=()=>{if(sendText($("txt").value))$("txt").value=""};
 $("pasteb").onclick=async()=>{try{sendText(await navigator.clipboard.readText())}catch{say(tr("The clipboard could not be read. Allow clipboard access, or paste the text into the box."),true)}};
 const dz=$("drop");
@@ -876,7 +1229,9 @@ if(/iPhone|iPad/.test(navigator.userAgent)&&!standalone)$("ioshint").hidden=fals
 if("serviceWorker" in navigator&&location.protocol==="https:")navigator.serviceWorker.register("sw.js").catch(()=>{});
 
 // ---------- Start ----------
-if(HAS_OPFS)(async()=>{try{const r=await navigator.storage.getDirectory();for await(const [n] of r.entries())if(n.startsWith("ld-"))await r.removeEntry(n)}catch{}})();
+if(HAS_OPFS)(async()=>{try{
+  const p=getJ("ld.rx"),keep=p&&Date.now()-p.t<LOST?p.nm:null;if(!keep){delJ("ld.rx");delJ("ld.rxo")}
+  const r=await navigator.storage.getDirectory();for await(const [n] of r.entries())if(n.startsWith("ld-")&&n!==keep)await r.removeEntry(n)}catch{}})();
 $("cl").dataset.k=navigator.share?"Share link":"Copy link";
 setLang(detectLang(),false);permUi();view("vHome");
 // Opening a session link (or scanning its QR code) joins automatically.
